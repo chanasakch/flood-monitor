@@ -6,6 +6,7 @@ import type {
   HistoryResponse,
   LayerType,
   RadarResponse,
+  SearchResponse,
   SourceId,
   SourcesResponse,
   SourceStatus,
@@ -14,6 +15,7 @@ import { refreshOnVisit } from './cron';
 import { cacheGet, cachePut, getAllStatuses, getSnapshot, getStatus, recordFailure, recordSuccess } from './db';
 import type { Env } from './env';
 import { fetchOpenMeteo } from './fetchers/open-meteo';
+import { fetchPhoton } from './fetchers/photon';
 import { fetchRainGraph } from './fetchers/thaiwater-rain';
 import { fetchWaterGraph } from './fetchers/thaiwater-water';
 import { fetchTmdHourly } from './fetchers/tmd-nwp';
@@ -256,6 +258,34 @@ async function history(env: Env, id: string): Promise<Response> {
   }
 }
 
+// ---------- /api/search ----------
+
+const SEARCH_TTL_S = 7 * 86400;
+
+/**
+ * Place-name search for the search box, answered by Photon (OpenStreetMap data) and cached for a
+ * week per query. The visitor's browser never talks to the search service itself.
+ */
+async function search(env: Env, url: URL): Promise<Response> {
+  const q = (url.searchParams.get('q') ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  if (q.length < 2) return error(400, 'query_too_short');
+  const key = `geo:${q.toLowerCase()}`;
+  const nowS = Math.floor(Date.now() / 1000);
+  const cached = await cacheGet(env.DB, key);
+  if (cached && cached.expires_at > nowS) return json(cached.body, { maxAge: 3600 });
+  try {
+    const res: SearchResponse = { q, results: await fetchPhoton(q) };
+    const body = JSON.stringify(res);
+    await cachePut(env.DB, key, new Date().toISOString(), res.results.length ? SEARCH_TTL_S : 86400, body);
+    return json(body, { maxAge: 3600 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[search] failed: ${message}`);
+    if (cached) return json(cached.body);
+    return json({ q, results: [], error: message } satisfies SearchResponse);
+  }
+}
+
 // ---------- /api/sources ----------
 
 async function sources(env: Env): Promise<Response> {
@@ -287,6 +317,7 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
     if (path === '/api/health') return json({ ok: true });
     if (path === '/api/sources') return await sources(env);
     if (path === '/api/forecast') return await forecast(env, url);
+    if (path === '/api/search') return await search(env, url);
     if (path === '/api/radar/frame.png') return await radarFrame(env);
     if (path === '/api/layers/radar') return await radar(env);
     if (path.startsWith('/api/layers/')) {

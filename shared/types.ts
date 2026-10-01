@@ -128,3 +128,21 @@ export interface SourcesResponse {
   sources: SourceStatus[];
   recent_errors: { source: SourceId; at: string; ok: boolean; message: string | null }[];
 }
+
+/** One place found by the search box. */
+export interface SearchResult {
+  name: string;
+  /** Where it is, e.g. district and province. */
+  detail: string;
+  lat: number;
+  lng: number;
+  /** `admin`: subdistrict, district or province from the built-in list. `osm`: a named place from OpenStreetMap. */
+  source: 'admin' | 'osm';
+}
+
+export interface SearchResponse {
+  q: string;
+  results: SearchResult[];
+  /** Set when the place-name service could not be reached; the built-in list still works. */
+  error?: string;
+}

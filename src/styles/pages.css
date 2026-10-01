@@ -735,3 +735,118 @@ thead th:first-child {
     grid-template-columns: 42% 1fr;
   }
 }
+
+/* ---------- Place search ---------- */
+
+.search {
+  position: relative;
+}
+.search-card h2 {
+  margin-bottom: 2px;
+}
+.search-card .search {
+  margin-top: 10px;
+}
+.search-card {
+  margin-bottom: 14px;
+}
+.search-box {
+  position: relative;
+}
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.search-input {
+  padding-left: 44px;
+  padding-right: 48px;
+  min-height: 52px;
+}
+.search-input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-clear {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+}
+.search-panel {
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.search-group {
+  padding: 8px 14px 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 14px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.search-panel li:first-child .search-result {
+  border-top: 0;
+}
+.search-result:hover,
+.search-result:focus-visible {
+  background: var(--primary-soft);
+}
+.search-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.search-note {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+}
+.search-credit {
+  padding: 6px 14px 8px;
+  font-size: 0.74rem;
+  border-top: 1px solid var(--border);
+}
+.dialog .search {
+  margin-bottom: 10px;
+}
+
+/* On the map the search floats over the top-left corner. */
+.map-search {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 64px;
+  z-index: 6;
+  max-width: 420px;
+}
+.map-search .search-input {
+  box-shadow: var(--shadow-raised);
+  border-color: var(--border);
+}
+.map-search .search-panel {
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  box-shadow: var(--shadow-raised);
+}
+.map-search ~ .map-hint {
+  top: 74px;
+}

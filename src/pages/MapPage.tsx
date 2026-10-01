@@ -7,6 +7,7 @@ import { ForecastSources } from '../components/ForecastSources';
 import { Lazy } from '../components/Lazy';
 import { ExtLink, Link } from '../components/Link';
 import { MiniForecast } from '../components/MiniForecast';
+import { PlaceSearch } from '../components/PlaceSearch';
 import { ReadingRow, TYPE_ICON } from '../components/ReadingRow';
 import { Skeleton } from '../components/States';
 import { Banner, Chip, LevelIcon, SourceLine, sourceName, sourceShortName } from '../components/Status';
@@ -67,21 +68,23 @@ const LEGEND_NOTE: Record<LayerType, string> = {
   cctv: 'cctv.legend',
 };
 
-type Sel = { kind: 'reading'; reading: Reading } | { kind: 'point'; lat: number; lng: number } | null;
+type Sel = { kind: 'reading'; reading: Reading } | { kind: 'point'; lat: number; lng: number; name?: string } | null;
 
 // ---------- panel pieces ----------
 
-function PointPanel({ lat, lng, now, pickMode }: { lat: number; lng: number; now: number; pickMode: boolean }) {
+function PointPanel({ lat, lng, name, now, pickMode }: { lat: number; lng: number; name?: string; now: number; pickMode: boolean }) {
   const ok = inThailand(lat, lng);
   const fc = useAsync(() => (ok ? getForecast(lat, lng) : Promise.reject(new Error('outside'))), [lat.toFixed(2), lng.toFixed(2)]);
   const view = fc.data ? buildForecast(fc.data, now, 12) : null;
   const summary = view ? summarize(view) : null;
   const at = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  // A searched place keeps its name on the next page and in the save dialog.
+  const nameParam = name ? `name=${encodeURIComponent(name)}` : '';
   return (
     <>
       <h2 class="card-title">
         <MapPin size={20} aria-hidden="true" />
-        {t('place.pointTitle')}
+        {name ?? t('place.pointTitle')}
       </h2>
       <p class="muted small num">
         {lat.toFixed(4)}, {lng.toFixed(4)}
@@ -103,17 +106,17 @@ function PointPanel({ lat, lng, now, pickMode }: { lat: number; lng: number; now
           )}
           <div class="btn-row panel-actions">
             {pickMode ? (
-              <button type="button" class="btn btn-primary btn-block" onClick={() => navigate(`/?at=${at}`)}>
+              <button type="button" class="btn btn-primary btn-block" onClick={() => navigate(`/?at=${at}${nameParam && `&${nameParam}`}`)}>
                 <Check size={18} aria-hidden="true" />
                 {t('map.pickConfirm')}
               </button>
             ) : (
               <>
-                <Link to={`/place/at/${at}`} class="btn btn-primary">
+                <Link to={`/place/at/${at}${nameParam && `?${nameParam}`}`} class="btn btn-primary">
                   {t('map.pointActions')}
                   <ChevronRight size={18} aria-hidden="true" />
                 </Link>
-                <button type="button" class="btn btn-secondary" onClick={() => navigate(`/?at=${at}`)}>
+                <button type="button" class="btn btn-secondary" onClick={() => navigate(`/?at=${at}${nameParam && `&${nameParam}`}`)}>
                   <Save size={18} aria-hidden="true" />
                   {t('place.saveThis')}
                 </button>
@@ -300,6 +303,7 @@ export function MapPage({ route }: { route: Route }) {
   const [mode3d, setMode3d] = useState(false);
   const [slowNotice, setSlowNotice] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const [focus, setFocus] = useState<{ lat: number; lng: number; zoom: number } | null>(null);
 
   // Load a layer only once it is switched on (the rain layer alone is over 4,000 stations).
   useEffect(() => {
@@ -355,6 +359,7 @@ export function MapPage({ route }: { route: Route }) {
     now,
     mode3d,
     initialView,
+    focus,
     pin,
     onSelect: (reading) => {
       setSheet(false);
@@ -375,6 +380,17 @@ export function MapPage({ route }: { route: Route }) {
       <h1 class="sr-only">{t('map.title')}</h1>
       <div class="map-area">
         <Lazy load={loadMap} props={mapProps} height={420} />
+        <div class="map-search">
+          <PlaceSearch
+            id="map-search"
+            hideLabel
+            onPick={(r) => {
+              setSheet(false);
+              setFocus({ lat: r.lat, lng: r.lng, zoom: r.source === 'osm' ? 15 : 12 });
+              setSel({ kind: 'point', lat: r.lat, lng: r.lng, name: r.name });
+            }}
+          />
+        </div>
         {pickMode && !sel && (
           <div class="map-hint" role="status">
             <MapPin size={18} aria-hidden="true" />
@@ -401,7 +417,7 @@ export function MapPage({ route }: { route: Route }) {
             <button type="button" class="btn btn-ghost panel-close" onClick={() => setSel(null)} aria-label={t('common.close')}>
               <X size={22} aria-hidden="true" />
             </button>
-            {sel.kind === 'reading' ? <ReadingPanel reading={sel.reading} now={now} /> : <PointPanel lat={sel.lat} lng={sel.lng} now={now} pickMode={pickMode} />}
+            {sel.kind === 'reading' ? <ReadingPanel reading={sel.reading} now={now} /> : <PointPanel lat={sel.lat} lng={sel.lng} name={sel.name} now={now} pickMode={pickMode} />}
           </section>
         )}
         <section class="card panel-layers">

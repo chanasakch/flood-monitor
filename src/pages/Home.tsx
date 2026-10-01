@@ -3,6 +3,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { Link } from '../components/Link';
 import { PlaceCard } from '../components/PlaceCard';
 import { PlaceDialog, readDraft, type PlaceDraft } from '../components/PlaceDialog';
+import { PlaceSearch } from '../components/PlaceSearch';
 import { CardSkeleton, EmptyState, ErrorState } from '../components/States';
 import { Banner, sourceName } from '../components/Status';
 import { onLayerRefreshed } from '../lib/api';
@@ -25,7 +26,7 @@ function draftFromQuery(q: URLSearchParams): PlaceDraft | null {
     const p = getPlace(editId);
     if (p) return { ...p, ...pos };
   }
-  if (q.has('add') || q.has('at')) return { name: '', kind: 'home', ...pos };
+  if (q.has('add') || q.has('at')) return { name: (q.get('name') ?? '').slice(0, 60), kind: 'home', ...pos };
   return null;
 }
 
@@ -59,6 +60,16 @@ export function Home({ route }: { route: Route }) {
           </button>
         )}
       </div>
+
+      <section class="card search-card" aria-labelledby="search-title">
+        <h2 id="search-title">{t('search.homeTitle')}</h2>
+        <p class="muted small">{t('search.homeHint')}</p>
+        <PlaceSearch
+          id="home-search"
+          hideLabel
+          onPick={(r) => navigate(`/place/at/${r.lat},${r.lng}?name=${encodeURIComponent(r.name)}`)}
+        />
+      </section>
 
       {places.length === 0 ? (
         <div class="card">

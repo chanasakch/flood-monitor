@@ -56,7 +56,7 @@ export function App() {
         {isMap ? (
           <MapPage route={route} />
         ) : path.startsWith('/place/') ? (
-          <PlaceDetail key={path} path={path} />
+          <PlaceDetail key={path} path={path} name={route.query.get('name')} />
         ) : path === '/sources' ? (
           <SourcesPage />
         ) : path === '/about' ? (

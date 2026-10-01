@@ -47,6 +47,8 @@ export interface MapViewProps {
   now: number;
   mode3d: boolean;
   initialView: { lat: number; lng: number; zoom: number } | null;
+  /** Move the camera here when it changes (search result). */
+  focus: { lat: number; lng: number; zoom: number } | null;
   /** Highlighted position: the selected marker or the tapped point. */
   pin: { lat: number; lng: number } | null;
   onSelect: (reading: Reading) => void;
@@ -338,6 +340,11 @@ export default function MapView(props: MapViewProps) {
       pinRef.current = new Marker({ element: el }).setLngLat([props.pin.lng, props.pin.lat]).addTo(map);
     }
   }, [props.pin?.lat, props.pin?.lng]);
+
+  useEffect(() => {
+    const f = props.focus;
+    if (f) mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: f.zoom, duration: 900 });
+  }, [props.focus]);
 
   return <div ref={host} class="map-canvas" />;
 }

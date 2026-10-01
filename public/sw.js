@@ -2,7 +2,7 @@
    poor signal. Cached API data keeps its original observation times, so the page still greys
    it out as "not current" when it is old. */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL = `fm-shell-${VERSION}`;
 const DATA = `fm-data-${VERSION}`;
 const SHELL_URLS = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png'];
@@ -124,5 +124,5 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname === '/api/radar/frame.png') event.respondWith(radarFrame(request));
   else if (url.pathname.startsWith('/api/')) event.respondWith(apiNetworkFirst(request));
   else if (request.mode === 'navigate') event.respondWith(pageNetworkFirst(request));
-  else if (url.pathname.startsWith('/assets/') || SHELL_URLS.includes(url.pathname)) event.respondWith(assetCacheFirst(request));
+  else if (url.pathname.startsWith('/assets/') || url.pathname === '/gazetteer.json' || SHELL_URLS.includes(url.pathname)) event.respondWith(assetCacheFirst(request));
 });

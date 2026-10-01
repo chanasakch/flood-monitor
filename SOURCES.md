@@ -184,6 +184,23 @@ the test day 53 % of rain stations and 28 % of water stations were 90-120 min ol
   handler (`SiteCameraHandler.ashx`); no stable public list with coordinates was found.
 - Decision: **LINK-OUT** to the official page.
 
+## Place search (not flood data)
+
+The search box only moves the map or opens a point; it never supplies readings.
+
+- **Subdistricts, districts, provinces**: `public/gazetteer.json`, built by
+  `scripts/build-gazetteer.mjs` from the subdistrict point file on the TMD radar page,
+  `https://weather.tmd.go.th/composite/data/tambon_points.geojson` (7,367 subdistricts, 928
+  districts, 77 provinces, Thai and English names, centre points). Bundled with the site, so it
+  works offline and no query leaves the device. District and province positions are the mean of
+  their subdistrict points. No licence is stated for the file; it holds administrative names
+  and coordinates only. Rebuild it when administrative boundaries change.
+- **Named places** (schools, temples, markets, ...): Photon, `https://photon.komoot.io/api/`
+  (OpenStreetMap data, ODbL, no key). Called by the Worker at `/api/search?q=`, limited to
+  Thailand's bounding box, cached in D1 for 7 days per query. The service asks for fair use and
+  may throttle; when it fails the built-in list still works and the box says so. Typical
+  response time 3-4 s. Fixture: `photon-search.json`.
+
 ## Map and other third-party resources
 
 - Base map: OpenFreeMap styles `https://tiles.openfreemap.org/styles/{positron,dark,liberty}`

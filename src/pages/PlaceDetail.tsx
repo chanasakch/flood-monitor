@@ -31,13 +31,13 @@ interface Target {
 }
 
 /** `/place/<id>` is a saved place; `/place/at/<lat>,<lng>` is any point tapped on the map. */
-function resolveTarget(path: string): Target | 'not-found' | 'outside' {
+function resolveTarget(path: string, name: string | null): Target | 'not-found' | 'outside' {
   const at = /^\/place\/at\/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/.exec(path);
   if (at) {
     const lat = Number(at[1]);
     const lng = Number(at[2]);
     if (!inThailand(lat, lng)) return 'outside';
-    return { id: null, name: t('place.pointTitle'), lat, lng, kind: 'other' };
+    return { id: null, name: name?.trim().slice(0, 60) || t('place.pointTitle'), lat, lng, kind: 'other' };
   }
   const p = getPlace(decodeURIComponent(path.slice('/place/'.length)));
   return p ? { ...p } : 'not-found';
@@ -320,10 +320,10 @@ function RoadCard({ reading, now }: { reading: Reading; now: number }) {
 
 // ---------- Page ----------
 
-export function PlaceDetail({ path }: { path: string }) {
+export function PlaceDetail({ path, name = null }: { path: string; name?: string | null }) {
   useSubscription(onPlacesChange);
   const now = useNow();
-  const target = resolveTarget(path);
+  const target = resolveTarget(path, name);
   const data = useAsync(() => loadLayers([...DETAIL_LAYERS]), [], 5 * 60_000);
   useEffect(() => onLayerRefreshed(data.reload), [data.reload]);
 
@@ -387,7 +387,7 @@ export function PlaceDetail({ path }: { path: string }) {
               </button>
             </>
           ) : (
-            <button type="button" class="btn btn-primary" onClick={() => navigate(`/?at=${lat},${lng}`)}>
+            <button type="button" class="btn btn-primary" onClick={() => navigate(`/?at=${lat},${lng}${name ? `&name=${encodeURIComponent(name)}` : ''}`)}>
               <Save size={18} aria-hidden="true" />
               {t('place.saveThis')}
             </button>

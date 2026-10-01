@@ -74,6 +74,7 @@ export function AboutPage() {
             ))}
           </ul>
           <p class="muted small">{t('about.mapCredit')}</p>
+          <p class="muted small">{t('about.searchCredit')}</p>
         </section>
 
         <section class="card">
@@ -84,6 +85,7 @@ export function AboutPage() {
             <li>{t('about.limit3')}</li>
             <li>{t('about.limit4')}</li>
             <li>{t('about.limit5')}</li>
+            <li>{t('about.limit6')}</li>
           </ul>
         </section>
 

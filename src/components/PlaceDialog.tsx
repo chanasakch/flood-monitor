@@ -5,6 +5,7 @@ import { t } from '../lib/i18n';
 import { savePlace, type Place, type PlaceKind } from '../lib/places';
 import { navigate } from '../lib/router';
 import { KIND_ICON } from './PlaceCard';
+import { PlaceSearch } from './PlaceSearch';
 
 const DRAFT_KEY = 'fm.placeDraft';
 const KINDS: PlaceKind[] = ['home', 'work', 'school', 'other'];
@@ -148,6 +149,15 @@ export function PlaceDialog({ initial, onClose, onSaved }: Props) {
                 ? t('place.picked', { lat: pos.lat.toFixed(4), lng: pos.lng.toFixed(4) })
                 : t('place.notPicked')}
           </p>
+          <PlaceSearch
+            id="dialog-search"
+            hideLabel
+            onPick={(r) => {
+              setError(null);
+              setPos({ lat: r.lat, lng: r.lng });
+              if (!name.trim()) setName(r.name.slice(0, 60));
+            }}
+          />
           <div class="btn-row">
             <button type="button" class="btn btn-secondary" onClick={useCurrent} disabled={locating}>
               <LocateFixed size={18} aria-hidden="true" />

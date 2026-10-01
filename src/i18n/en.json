@@ -328,6 +328,23 @@
     "installBody": "Open the browser menu and choose “Add to Home Screen” to open the site like an app and see the last saved data even with a poor signal.",
     "mapCredit": "Base map: OpenFreeMap, OpenMapTiles and OpenStreetMap contributors",
     "staleWhy": "Rain and water level stations use 3 hours because several agencies report hourly and publish 1.5 to 2.5 hours after the observation.",
-    "limit5": "Rainfall and water level are fetched from ThaiWater directly by your browser, because ThaiWater does not accept requests from this site's server. ThaiWater therefore sees a connection from your device, as it would when you open thaiwater.net, and each reload (every 10 minutes) uses about 1 MB of data."
+    "limit5": "Rainfall and water level are fetched from ThaiWater directly by your browser, because ThaiWater does not accept requests from this site's server. ThaiWater therefore sees a connection from your device, as it would when you open thaiwater.net, and each reload (every 10 minutes) uses about 1 MB of data.",
+    "searchCredit": "Subdistrict and district positions: Thai Meteorological Department · Place names: OpenStreetMap via Photon",
+    "limit6": "Place-name searches are sent through this site's server to the Photon service (OpenStreetMap data), so some places may be missing or spelled differently."
+  },
+  "search": {
+    "label": "Search for a place",
+    "placeholder": "Subdistrict, district, school, temple, market…",
+    "admin": "Subdistricts, districts, provinces",
+    "places": "Places",
+    "searching": "Searching…",
+    "none": "Nothing found for “{q}”",
+    "noneHint": "Try a subdistrict or district name, or pick a point on the map.",
+    "placesDown": "Place names cannot be searched right now. Subdistricts, districts and provinces still work.",
+    "credit": "Place names from OpenStreetMap",
+    "clear": "Clear search",
+    "results": "{n} results",
+    "homeTitle": "Check another place",
+    "homeHint": "Type a place name, then tap a result to see rain, water level and the forecast near it."
   }
 }
