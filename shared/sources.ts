@@ -6,6 +6,9 @@ export interface SourceInfo {
   id: SourceId;
   name_th: string;
   name_en: string;
+  /** Compact name used next to each data point. */
+  short_th: string;
+  short_en: string;
   /** Official page a visitor can open to see the original data. */
   url: string;
   kind: SourceKind;
@@ -17,6 +20,13 @@ export interface SourceInfo {
 /** Default staleness thresholds from the project brief. */
 export const STALE_MINUTES = {
   sensor: 60,
+  /**
+   * ThaiWater stations from several agencies report once an hour and are published 1.5-2.5 h
+   * after the observation (measured, see SOURCES.md). With the 60 min default more than half of
+   * them would be grey at any moment, so these two sources use 3 h. Every value still shows its
+   * real observation time.
+   */
+  hourlyTelemetry: 180,
   radar: 30,
   forecast: 180,
   announcement: 24 * 60,
@@ -30,24 +40,30 @@ export const SOURCES: Record<SourceId, SourceInfo> = {
     id: 'thaiwater-rain',
     name_th: 'คลังข้อมูลน้ำแห่งชาติ (ThaiWater) — ฝน',
     name_en: 'ThaiWater (HII) — rainfall',
+    short_th: 'ThaiWater (สสน.)',
+    short_en: 'ThaiWater (HII)',
     url: 'https://www.thaiwater.net/weather/rainfall',
     kind: 'sensor',
-    stale_minutes: STALE_MINUTES.sensor,
+    stale_minutes: STALE_MINUTES.hourlyTelemetry,
     layer: 'rain',
   },
   'thaiwater-water': {
     id: 'thaiwater-water',
     name_th: 'คลังข้อมูลน้ำแห่งชาติ (ThaiWater) — ระดับน้ำ',
     name_en: 'ThaiWater (HII) — water level',
+    short_th: 'ThaiWater (สสน.)',
+    short_en: 'ThaiWater (HII)',
     url: 'https://www.thaiwater.net/water/wl',
     kind: 'sensor',
-    stale_minutes: STALE_MINUTES.sensor,
+    stale_minutes: STALE_MINUTES.hourlyTelemetry,
     layer: 'water',
   },
   'tmd-radar': {
     id: 'tmd-radar',
     name_th: 'กรมอุตุนิยมวิทยา — เรดาร์ฝน',
     name_en: 'Thai Meteorological Department — rain radar',
+    short_th: 'กรมอุตุนิยมวิทยา',
+    short_en: 'Thai Meteorological Dept.',
     url: 'https://weather.tmd.go.th/composite/index_composite.html',
     kind: 'radar',
     stale_minutes: STALE_MINUTES.radar,
@@ -57,6 +73,8 @@ export const SOURCES: Record<SourceId, SourceInfo> = {
     id: 'bma-road',
     name_th: 'สำนักการระบายน้ำ กทม. — น้ำท่วมถนน',
     name_en: 'BMA Drainage Department — road flood sensors',
+    short_th: 'สำนักการระบายน้ำ กทม.',
+    short_en: 'BMA Drainage Dept.',
     url: 'https://weather.bangkok.go.th/flood',
     kind: 'sensor',
     stale_minutes: STALE_MINUTES.sensor,
@@ -66,6 +84,8 @@ export const SOURCES: Record<SourceId, SourceInfo> = {
     id: 'bma-cctv',
     name_th: 'กทม. — กล้อง CCTV จราจร',
     name_en: 'BMA — traffic CCTV',
+    short_th: 'กทม. (BMA Traffic)',
+    short_en: 'BMA Traffic',
     url: 'http://www.bmatraffic.com/index.aspx',
     kind: 'directory',
     stale_minutes: null,
@@ -75,6 +95,8 @@ export const SOURCES: Record<SourceId, SourceInfo> = {
     id: 'doh-hdms',
     name_th: 'กรมทางหลวง — ศูนย์บริหารงานอุบัติภัย',
     name_en: 'Department of Highways — disaster management centre',
+    short_th: 'กรมทางหลวง',
+    short_en: 'Dept. of Highways',
     url: 'https://hdms.doh.go.th/dashboard',
     kind: 'announcement',
     stale_minutes: STALE_MINUTES.announcement,
@@ -84,6 +106,8 @@ export const SOURCES: Record<SourceId, SourceInfo> = {
     id: 'tmd-nwp',
     name_th: 'กรมอุตุนิยมวิทยา — พยากรณ์อากาศเชิงตัวเลข',
     name_en: 'Thai Meteorological Department — NWP forecast',
+    short_th: 'กรมอุตุนิยมวิทยา (TMD)',
+    short_en: 'Thai Meteorological Dept. (TMD)',
     url: 'https://data.tmd.go.th/nwpapi/doc/',
     kind: 'forecast',
     stale_minutes: STALE_MINUTES.forecast,
@@ -92,6 +116,8 @@ export const SOURCES: Record<SourceId, SourceInfo> = {
     id: 'open-meteo',
     name_th: 'Open-Meteo',
     name_en: 'Open-Meteo',
+    short_th: 'Open-Meteo',
+    short_en: 'Open-Meteo',
     url: 'https://open-meteo.com/',
     kind: 'forecast',
     stale_minutes: STALE_MINUTES.forecast,

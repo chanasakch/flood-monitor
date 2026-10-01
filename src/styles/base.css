@@ -225,10 +225,17 @@ svg {
   gap: 0 4px;
 }
 .app-footer.compact .tel {
-  min-height: 28px;
-  padding: 0 8px;
+  min-height: 26px;
+  padding: 0 6px;
   border: 0;
   font-size: 0.76rem;
+}
+.app-footer.compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 10px;
 }
 
 /* ---------- Bottom tab bar ---------- */
@@ -479,9 +486,6 @@ svg {
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
-.reading-meta a {
-  white-space: nowrap;
-}
 
 .source-line {
   display: flex;
@@ -491,10 +495,9 @@ svg {
   font-size: 0.82rem;
   color: var(--text-muted);
 }
-.source-line a {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.source-line a svg {
+  margin-left: 3px;
+  vertical-align: -1px;
 }
 
 /* ---------- Skeleton, empty and error states ---------- */

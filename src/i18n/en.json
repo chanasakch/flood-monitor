@@ -24,7 +24,7 @@
     "disclaimer": "For decision support only. Please check official announcements again.",
     "emergency": "Emergency numbers",
     "n1669": "Medical emergency",
-    "n1784": "Disaster hotline (DDPM)",
+    "n1784": "DDPM disaster line",
     "n1555": "Bangkok (BMA)"
   },
   "common": {
@@ -308,7 +308,7 @@
     "dangerText": "The value has reached a level the agency treats as dangerous, such as a river overflowing or more than 10 cm of water on a road.",
     "staleText": "The data is older than its threshold, or the source sent no value, so no alert colour is shown.",
     "staleTitle": "What “data not current” means",
-    "staleBody": "When data is older than its threshold (sensors 60 minutes, radar 30 minutes, forecast 3 hours, announcements 24 hours) the site shows it in grey with “Data not current” instead of its last colour, because the real situation may have changed.",
+    "staleBody": "When data is older than its threshold (road flood sensors 60 minutes, rain and water level stations 3 hours, radar 30 minutes, forecast 3 hours, announcements 24 hours) the site shows it in grey with “Data not current” instead of its last colour, because the real situation may have changed.",
     "noDataTitle": "“No data” does not mean “not flooded”",
     "noDataBody": "Areas without sensors show “No data”. This site never confirms that an area is free of flooding. Road flood sensors exist in Bangkok only.",
     "forecastTitle": "Reading the rain forecast",
@@ -323,6 +323,7 @@
     "emergencyTitle": "Emergency numbers",
     "installTitle": "Install on your phone",
     "installBody": "Open the browser menu and choose “Add to Home Screen” to open the site like an app and see the last saved data even with a poor signal.",
-    "mapCredit": "Base map: OpenFreeMap, OpenMapTiles and OpenStreetMap contributors"
+    "mapCredit": "Base map: OpenFreeMap, OpenMapTiles and OpenStreetMap contributors",
+    "staleWhy": "Rain and water level stations use 3 hours because several agencies report hourly and publish 1.5 to 2.5 hours after the observation."
   }
 }
