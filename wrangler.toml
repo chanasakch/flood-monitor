@@ -15,13 +15,11 @@ database_name = "flood-monitor"
 database_id = "871293a1-9e12-44c3-a24d-55ebccc3f6e3"
 migrations_dir = "migrations"
 
-# Three triggers, one per group, so each group gets its own CPU budget on the free plan.
-# Every group still runs once every 10 minutes.
+# Two triggers, each running once every 10 minutes with its own CPU budget.
 [triggers]
 crons = [
-  "*/10 * * * *",    # rain stations (largest payload, runs alone)
-  "3-59/10 * * * *", # water level, Bangkok road sensors, radar
-  "6-59/10 * * * *", # highway announcements, CCTV list (daily), housekeeping
+  "*/10 * * * *",    # radar, Bangkok road sensors (only when the run lands in Thailand)
+  "6-59/10 * * * *", # highway announcements (same condition), CCTV list, housekeeping
 ]
 
 # Run the Worker (including cron runs) near Bangkok. Several Thai government sources only answer

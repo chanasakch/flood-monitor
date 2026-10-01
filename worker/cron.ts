@@ -10,8 +10,7 @@ import { fetchWater } from './fetchers/thaiwater-water';
 import { fetchRadarImage, fetchRadarList } from './fetchers/tmd-radar';
 import { packLayer, unpackLayer, type PackedLayer } from './pack';
 
-export const CRON_RAIN = '*/10 * * * *';
-export const CRON_SENSORS = '3-59/10 * * * *';
+export const CRON_SENSORS = '*/10 * * * *';
 export const CRON_ANNOUNCE = '6-59/10 * * * *';
 
 const CCTV_REFRESH_MS = 24 * 3600 * 1000;
@@ -192,11 +191,12 @@ async function reachable(names: JobName[]): Promise<JobName[]> {
 }
 
 export async function runCron(env: Env, cron: string, scheduledTime: number): Promise<void> {
+  // ThaiWater (rain, water level) is not fetched here: it rejects Cloudflare Workers with 429,
+  // so the visitor's browser fetches it directly (src/lib/thaiwater.ts). The `rain` and `water`
+  // jobs stay available for local development and in case access is opened.
   switch (cron) {
-    case CRON_RAIN:
-      return runJobs(env, ['rain']);
     case CRON_SENSORS:
-      return runJobs(env, await reachable(['water', 'road', 'radar']));
+      return runJobs(env, await reachable(['radar', 'road']));
     case CRON_ANNOUNCE: {
       await runJobs(env, await reachable(['highway', 'cctv']));
       // Housekeeping once a day, around 03:06 Thai time (20:06 UTC).

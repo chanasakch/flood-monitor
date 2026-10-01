@@ -2,7 +2,7 @@
    poor signal. Cached API data keeps its original observation times, so the page still greys
    it out as "not current" when it is old. */
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL = `fm-shell-${VERSION}`;
 const DATA = `fm-data-${VERSION}`;
 const SHELL_URLS = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png'];
@@ -49,6 +49,35 @@ async function apiNetworkFirst(request) {
   }
 }
 
+const THAIWATER = 'https://api-v3.thaiwater.net';
+const THAIWATER_FRESH_MS = 10 * 60 * 1000;
+
+/**
+ * ThaiWater is fetched directly by the page. Keep each answer for 10 minutes so reloading does
+ * not download megabytes again, and fall back to the saved copy when the network fails.
+ * `x-fm-stored` carries the time the copy was fetched; `x-fm-cache` marks an offline fallback.
+ */
+async function thaiwater(request) {
+  const cache = await caches.open(DATA);
+  const hit = await cache.match(request);
+  const storedAt = hit ? Date.parse(hit.headers.get('x-fm-stored') || '') : NaN;
+  if (hit && Date.now() - storedAt < THAIWATER_FRESH_MS) return hit;
+  try {
+    const res = await fetch(request);
+    if (!res.ok) return res;
+    const headers = new Headers(res.headers);
+    headers.set('x-fm-stored', new Date().toISOString());
+    const copy = new Response(await res.blob(), { status: 200, headers });
+    await cache.put(request, copy.clone());
+    return copy;
+  } catch (err) {
+    if (!hit) throw err;
+    const headers = new Headers(hit.headers);
+    headers.set('x-fm-cache', '1');
+    return new Response(await hit.blob(), { status: 200, headers });
+  }
+}
+
 async function radarFrame(request) {
   // Each frame has its own URL (?t=time) and never changes: serve from cache, keep only a few.
   const cache = await caches.open(DATA);
@@ -89,6 +118,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+  if (url.origin === THAIWATER) return event.respondWith(thaiwater(request));
   if (url.origin !== self.location.origin) return; // map tiles and other origins: browser default
 
   if (url.pathname === '/api/radar/frame.png') event.respondWith(radarFrame(request));

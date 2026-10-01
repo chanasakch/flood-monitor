@@ -8,6 +8,7 @@ import { getSources } from '../lib/api';
 import { formatAgo, formatDateTime, formatNumber, formatTime } from '../lib/format';
 import { useAsync, useNow } from '../lib/hooks';
 import { t } from '../lib/i18n';
+import { directStatus, isDirectSource } from '../lib/thaiwater';
 
 function health(s: SourceStatus): { level: Level; label: string } {
   if (s.consecutive_failures > 0) return { level: 'danger', label: t('sources.failing') };
@@ -54,7 +55,8 @@ export function SourcesPage() {
           <p class="muted small checked">{t('sources.checked', { time: formatTime(data.data.now) })}</p>
           <div class="grid two">
             {SOURCE_IDS.map((id) => {
-              const s = data.data!.sources.find((x) => x.source === id);
+              // ThaiWater is fetched by this browser, so its status is the one recorded here.
+              const s = isDirectSource(id) ? directStatus(id) : data.data!.sources.find((x) => x.source === id);
               if (!s) return null;
               const info = SOURCES[id];
               const h = health(s);
@@ -83,6 +85,12 @@ export function SourcesPage() {
                       <dt>{t('sources.threshold')}</dt>
                       <dd>{threshold(info.stale_minutes)}</dd>
                     </div>
+                    {isDirectSource(id) && (
+                      <div>
+                        <dt>&nbsp;</dt>
+                        <dd class="muted">{t('sources.direct')}</dd>
+                      </div>
+                    )}
                     {info.kind === 'forecast' && (
                       <div>
                         <dt>&nbsp;</dt>

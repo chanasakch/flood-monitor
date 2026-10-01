@@ -9,6 +9,8 @@ import type {
   SourceStatus,
 } from '../../shared/types';
 
+import { fetchDirectHistory, fetchDirectLayer, isDirectLayer } from './thaiwater';
+
 export class ApiError extends Error {
   constructor(
     public code: string,
@@ -94,7 +96,23 @@ export function onLayerRefreshed(fn: () => void): () => void {
 }
 const pendingRefresh = new Set<string>();
 
+/** Rain and water level come straight from ThaiWater in the browser (see thaiwater.ts); 10 min in memory. */
+function getDirectLayer(type: 'rain' | 'water'): Promise<Layer> {
+  const key = `direct:${type}`;
+  const hit = mem.get(key);
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.promise as Promise<Layer>;
+  const promise = fetchDirectLayer(type).then((r) => {
+    if (r.fromCache) setServedFromCache(true);
+    // A failed attempt is not kept, so the next page view tries again.
+    if (!r.fetched_at && mem.get(key)?.promise === promise) mem.delete(key);
+    return { type, fetched_at: r.fetched_at, status: r.status, items: r.items } satisfies Layer;
+  });
+  mem.set(key, { at: Date.now(), promise });
+  return promise;
+}
+
 export async function getLayer(type: LayerType): Promise<Layer> {
+  if (isDirectLayer(type)) return getDirectLayer(type);
   const url = `/api/layers/${type}`;
   const res = await cached<LayerResponse>(url, 60_000);
   if (res.refreshing && !pendingRefresh.has(url)) {
@@ -115,7 +133,16 @@ export async function getLayer(type: LayerType): Promise<Layer> {
 
 export const getRadar = () => cached<RadarResponse>('/api/layers/radar', 60_000);
 export const getSources = () => cached<SourcesResponse>('/api/sources', 20_000);
-export const getHistory = (id: string) => cached<HistoryResponse>(`/api/history/${encodeURIComponent(id)}`, 5 * 60_000);
+export function getHistory(id: string): Promise<HistoryResponse> {
+  if (id.startsWith('road:')) return cached<HistoryResponse>(`/api/history/${encodeURIComponent(id)}`, 5 * 60_000);
+  // Water level and rain history: straight from ThaiWater, like the layers.
+  const key = `direct:${id}`;
+  const hit = mem.get(key);
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.promise as Promise<HistoryResponse>;
+  const promise = fetchDirectHistory(id);
+  mem.set(key, { at: Date.now(), promise });
+  return promise;
+}
 
 export function getForecast(lat: number, lng: number): Promise<ForecastResponse> {
   // Same rounding as the server so nearby points share a request.

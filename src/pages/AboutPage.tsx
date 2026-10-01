@@ -83,6 +83,7 @@ export function AboutPage() {
             <li>{t('about.limit2')}</li>
             <li>{t('about.limit3')}</li>
             <li>{t('about.limit4')}</li>
+            <li>{t('about.limit5')}</li>
           </ul>
         </section>
 

@@ -13,8 +13,8 @@ Status legend: **OK** = fetched and parsed ·
 |---|---|---|---|
 | 1 | TMD NWP API | OK | Hourly rain forecast, mm/h (primary) |
 | 2 | Open-Meteo | OK | Rain probability %, fallback mm/h |
-| 3 | ThaiWater rain | OK from Thailand, **blocked from Cloudflare Workers (429)** | Station rainfall 1 h / 24 h, nationwide |
-| 4 | ThaiWater water level | OK from Thailand, **blocked from Cloudflare Workers (429)** | River / canal level with alert level, nationwide |
+| 3 | ThaiWater rain | OK from Thailand, **blocked from Cloudflare Workers (429)**, fetched by the browser | Station rainfall 1 h / 24 h, nationwide |
+| 4 | ThaiWater water level | OK from Thailand, **blocked from Cloudflare Workers (429)**, fetched by the browser | River / canal level with alert level, nationwide |
 | 5 | TMD radar composite | OK (no CORS, no written licence) | Rain radar overlay |
 | 6 | BMA road flood sensors | OK | Road flood depth, Bangkok only |
 | 7 | BMA traffic CCTV | LINK-OUT (camera list OK from Thailand, **unreachable from Cloudflare**) | Camera locations, Bangkok only |
@@ -205,8 +205,8 @@ visitor's request, which for visitors in Thailand runs at Cloudflare Bangkok (`c
 | TMD radar composite | OK | OK | Works |
 | BMA road flood sensors | **403** | OK | Works, refreshed on visit |
 | Department of Highways HDMS | **520** | OK | Works, refreshed on visit |
-| ThaiWater rain | **429** | **429** | **Unavailable** |
-| ThaiWater water level | **429** | **429** | **Unavailable** |
+| ThaiWater rain | **429** | **429** | Works, **fetched by the visitor's browser** |
+| ThaiWater water level | **429** | **429** | Works, **fetched by the visitor's browser** |
 | BMA traffic CCTV list | **522** | **522** | **Unavailable**, link to the official site |
 
 Notes
@@ -227,9 +227,17 @@ Notes
   administrator), within a few milliseconds. Requests from one Worker to another Cloudflare
   customer leave from a small shared address pool, so ThaiWater's per-address limit is
   effectively always exhausted for Workers. Five of five attempts failed; a normal Thai
-  connection gets `200`. No other official host serves the same data. Nothing was done to get
-  around the limit. Rain stations and water level therefore show as "source unavailable".
+  connection gets `200`. No other official host serves the same data.
+  **Decision (owner, 2026-10-01):** the visitor's browser fetches ThaiWater directly
+  (`src/lib/thaiwater.ts`). The API allows cross-origin requests, the responses go through the
+  same tested parsers, and the service worker keeps each answer for 10 minutes. This departs
+  from the brief's "the frontend only calls our own API" for these two layers and their station
+  graphs. Costs: about 0.8 MB of transfer per 10 minutes per visitor (rain 0.58 MB + water
+  0.24 MB, gzip), ThaiWater sees the visitor's own connection, and the layers depend on
+  ThaiWater keeping cross-origin access open. The Worker no longer calls ThaiWater from cron.
+  The fetch status of these two sources is recorded in each visitor's browser and shown on the
+  status page as belonging to that device.
 - **BMA traffic CCTV** (`www.bmatraffic.com`, HTTP only) cannot be reached from Cloudflare at
   all (`522`, connection timed out). The CCTV layer shows as unavailable and links to the site.
-- The Worker retries ThaiWater every 10 minutes and the camera list every 6 hours, so the
-  layers come back by themselves if access is opened.
+- The Worker retries the camera list every 6 hours, so that layer comes back by itself if the
+  site becomes reachable.

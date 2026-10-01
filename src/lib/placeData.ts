@@ -75,5 +75,6 @@ export function layerDown(layers: Layers, type: LayerType): boolean {
 
 /** Layers whose source is currently failing, for the "source unavailable" notice. */
 export function failingSources(layers: Layers): Layer[] {
-  return Object.values(layers).filter((l): l is Layer => !!l && (l.status?.consecutive_failures ?? 0) > 0);
+  // The camera directory is not sensor data: when it is down, its own card says so instead of a page-wide warning.
+  return Object.values(layers).filter((l): l is Layer => !!l && l.type !== 'cctv' && (l.status?.consecutive_failures ?? 0) > 0);
 }

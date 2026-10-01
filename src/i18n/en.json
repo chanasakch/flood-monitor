@@ -281,7 +281,7 @@
   },
   "sources": {
     "title": "Data source status",
-    "intro": "This site fetches data from official agencies every 10 minutes. This page shows when each source was last fetched successfully.",
+    "intro": "This site fetches data from official agencies regularly. This page shows when each source was last fetched successfully.",
     "ok": "Working",
     "failing": "Unavailable",
     "never": "No data yet",
@@ -297,7 +297,8 @@
     "noErrors": "No errors in the past 7 days",
     "recovered": "Working again",
     "failures": "{n} failures in a row",
-    "checked": "Checked at {time}"
+    "checked": "Checked at {time}",
+    "direct": "Your browser fetches this data from ThaiWater directly. This status belongs to this device."
   },
   "about": {
     "title": "How to read this site",
@@ -318,7 +319,7 @@
     "sourcesTitle": "Data sources",
     "sourcesBody": "Every value shown has its source name, a link to the original page and its observation time.",
     "limitsTitle": "Limitations",
-    "limit1": "Data updates every 10 minutes and may lag behind the real situation.",
+    "limit1": "Radar updates every 10 minutes. Road flood sensors and highway reports update when someone opens the site (at most once per 10 minutes), so data may lag behind the real situation.",
     "limit2": "CCTV images have to be viewed on the original website.",
     "limit3": "Highway reports come from a Department of Highways system that may change format without notice.",
     "limit4": "If a source fails, the site shows the last data in grey and never estimates values itself.",
@@ -326,6 +327,7 @@
     "installTitle": "Install on your phone",
     "installBody": "Open the browser menu and choose “Add to Home Screen” to open the site like an app and see the last saved data even with a poor signal.",
     "mapCredit": "Base map: OpenFreeMap, OpenMapTiles and OpenStreetMap contributors",
-    "staleWhy": "Rain and water level stations use 3 hours because several agencies report hourly and publish 1.5 to 2.5 hours after the observation."
+    "staleWhy": "Rain and water level stations use 3 hours because several agencies report hourly and publish 1.5 to 2.5 hours after the observation.",
+    "limit5": "Rainfall and water level are fetched from ThaiWater directly by your browser, because ThaiWater does not accept requests from this site's server. ThaiWater therefore sees a connection from your device, as it would when you open thaiwater.net, and each reload (every 10 minutes) uses about 1 MB of data."
   }
 }
