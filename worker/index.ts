@@ -1,3 +1,4 @@
+import { runCron } from './cron';
 import type { Env } from './env';
 
 export default {
@@ -11,7 +12,7 @@ export default {
     return env.ASSETS.fetch(request);
   },
 
-  async scheduled(_controller: ScheduledController, _env: Env, _ctx: ExecutionContext): Promise<void> {
-    // Fetchers are wired in Phase 3.
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runCron(env, controller.cron, controller.scheduledTime));
   },
 } satisfies ExportedHandler<Env>;

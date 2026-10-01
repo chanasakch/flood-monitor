@@ -3974,6 +3974,254 @@
     "diff_wl_bank_text": "ต่ำกว่าตลิ่ง (ม.)",
     "river_gid": 187850,
     "river_name": "แม่น้ำเจ้าพระยา"
+   },
+   {
+    "id": 1316394975,
+    "waterlevel_datetime": "2026-10-01 16:00",
+    "waterlevel_m": null,
+    "waterlevel_msl": "99.60",
+    "waterlevel_msl_previous": "99.60",
+    "flow_rate": null,
+    "discharge": null,
+    "storage_percent": null,
+    "sort_order": null,
+    "station_type": "tele_waterlevel",
+    "agency": {
+     "id": 8,
+     "agency_name": {
+      "th": "การไฟฟ้าฝ่ายผลิตแห่งประเทศไทย",
+      "en": "Electricity Generating Authority of Thailand",
+      "jp": ""
+     },
+     "agency_shortname": {
+      "th": "กฟผ.",
+      "en": "EGAT",
+      "jp": ""
+     }
+    },
+    "basin": {
+     "id": 26,
+     "basin_code": 21,
+     "basin_name": {
+      "th": "ลุ่มน้ำภาคใต้ฝั่งตะวันออกตอนล่าง",
+      "en": "Peninsula - Lower East Coast Basin"
+     }
+    },
+    "station": {
+     "id": 562808,
+     "tele_station_name": {
+      "th": "เขื่อนบางลาง อ.บันนังสตา จ.ยะลา"
+     },
+     "tele_station_lat": 6.153667,
+     "tele_station_long": 101.273116,
+     "tele_station_oldcode": "BLGTU05",
+     "tele_station_type": "tele_waterlevel",
+     "left_bank": 0,
+     "right_bank": 0,
+     "min_bank": 0,
+     "ground_level": 0,
+     "offset": null,
+     "sub_basin_id": 335,
+     "agency_id": 8,
+     "geocode_id": 8291,
+     "hydro_id": null,
+     "qmax": null,
+     "is_key_station": false,
+     "warning_level_m": null,
+     "critical_level_m": null,
+     "critical_level_msl": 0
+    },
+    "geocode": {
+     "area_code": "5",
+     "area_name": {
+      "th": "ภาคใต้",
+      "en": "South"
+     },
+     "amphoe_code": "03",
+     "amphoe_name": {
+      "th": "บันนังสตา",
+      "en": "Bannang Sata District"
+     },
+     "tumbon_code": "06",
+     "tumbon_name": {
+      "th": "เขื่อนบางลาง",
+      "en": "Khuean Bang Lang"
+     },
+     "province_code": "95",
+     "province_name": {
+      "th": "ยะลา",
+      "en": "Yala"
+     }
+    },
+    "diff_wl_bank": "99.60",
+    "diff_wl_bank_text": "ล้นตลิ่ง (ม.)",
+    "river_gid": 231453,
+    "river_name": "แม่น้ำปัตตานี"
+   },
+   {
+    "id": 1316394970,
+    "waterlevel_datetime": "2026-10-01 16:00",
+    "waterlevel_m": null,
+    "waterlevel_msl": "331.69",
+    "waterlevel_msl_previous": "331.70",
+    "flow_rate": null,
+    "discharge": null,
+    "storage_percent": null,
+    "sort_order": null,
+    "station_type": "tele_waterlevel",
+    "agency": {
+     "id": 8,
+     "agency_name": {
+      "th": "การไฟฟ้าฝ่ายผลิตแห่งประเทศไทย",
+      "en": "Electricity Generating Authority of Thailand",
+      "jp": ""
+     },
+     "agency_shortname": {
+      "th": "กฟผ.",
+      "en": "EGAT",
+      "jp": ""
+     }
+    },
+    "basin": {
+     "id": 26,
+     "basin_code": 21,
+     "basin_name": {
+      "th": "ลุ่มน้ำภาคใต้ฝั่งตะวันออกตอนล่าง",
+      "en": "Peninsula - Lower East Coast Basin"
+     }
+    },
+    "station": {
+     "id": 562804,
+     "tele_station_name": {
+      "th": "ฝายละแอ อ.บันนังสตา จ.ยะลา"
+     },
+     "tele_station_lat": 6.143055,
+     "tele_station_long": 101.309167,
+     "tele_station_oldcode": "BLGTU06",
+     "tele_station_type": "tele_waterlevel",
+     "left_bank": 0,
+     "right_bank": 0,
+     "min_bank": 0,
+     "ground_level": 0,
+     "offset": null,
+     "sub_basin_id": 335,
+     "agency_id": 8,
+     "geocode_id": 8291,
+     "hydro_id": null,
+     "qmax": null,
+     "is_key_station": false,
+     "warning_level_m": null,
+     "critical_level_m": null,
+     "critical_level_msl": 0
+    },
+    "geocode": {
+     "area_code": "5",
+     "area_name": {
+      "th": "ภาคใต้",
+      "en": "South"
+     },
+     "amphoe_code": "03",
+     "amphoe_name": {
+      "th": "บันนังสตา",
+      "en": "Bannang Sata District"
+     },
+     "tumbon_code": "06",
+     "tumbon_name": {
+      "th": "เขื่อนบางลาง",
+      "en": "Khuean Bang Lang"
+     },
+     "province_code": "95",
+     "province_name": {
+      "th": "ยะลา",
+      "en": "Yala"
+     }
+    },
+    "diff_wl_bank": "331.69",
+    "diff_wl_bank_text": "ล้นตลิ่ง (ม.)",
+    "river_gid": 231505,
+    "river_name": "คลองละแอ"
+   },
+   {
+    "id": 1316403558,
+    "waterlevel_datetime": "2026-10-01 16:00",
+    "waterlevel_m": null,
+    "waterlevel_msl": "9.39",
+    "waterlevel_msl_previous": "9.39",
+    "flow_rate": null,
+    "discharge": "16.40",
+    "storage_percent": null,
+    "sort_order": null,
+    "station_type": "tele_waterlevel",
+    "agency": {
+     "id": 12,
+     "agency_name": {
+      "th": "กรมชลประทาน ",
+      "en": "Royal Irrigation Department",
+      "jp": ""
+     },
+     "agency_shortname": {
+      "th": "ชป.",
+      "en": "RID",
+      "jp": ""
+     }
+    },
+    "basin": {
+     "id": 16,
+     "basin_code": 15,
+     "basin_name": {
+      "th": "ลุ่มน้ำบางปะกง",
+      "en": "Bang Pakong Basin"
+     }
+    },
+    "station": {
+     "id": 2689,
+     "tele_station_name": {
+      "th": "บ้านป่าขะ"
+     },
+     "tele_station_lat": 14.28644,
+     "tele_station_long": 101.070473,
+     "tele_station_oldcode": "Ny.3",
+     "tele_station_type": "tele_waterlevel",
+     "left_bank": 11.36,
+     "right_bank": 11.36,
+     "min_bank": 11.36,
+     "offset": 5.1,
+     "sub_basin_id": 282,
+     "agency_id": 12,
+     "geocode_id": 1587,
+     "hydro_id": 6,
+     "qmax": 71.800003,
+     "is_key_station": true,
+     "warning_level_m": null,
+     "critical_level_m": null,
+     "critical_level_msl": null
+    },
+    "geocode": {
+     "area_code": "2",
+     "area_name": {
+      "th": "ภาคกลาง",
+      "en": "Central"
+     },
+     "amphoe_code": "03",
+     "amphoe_name": {
+      "th": "บ้านนา",
+      "en": "Ban Na District"
+     },
+     "tumbon_code": "08",
+     "tumbon_name": {
+      "th": "ป่าขะ",
+      "en": "Pa Kha"
+     },
+     "province_code": "26",
+     "province_name": {
+      "th": "นครนายก",
+      "en": "Nakhon Nayok"
+     }
+    },
+    "diff_wl_bank": "1.97",
+    "diff_wl_bank_text": "ต่ำกว่าตลิ่ง (ม.)",
+    "river_gid": 193539,
+    "river_name": "คลองห้วยถ่าน"
    }
   ]
  },
