@@ -1,0 +1,122 @@
+/* Design tokens. Every colour used in the app is defined here, once per theme. */
+:root {
+  color-scheme: light;
+
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #eef2f5;
+  --text: #14202b;
+  --text-muted: #4a5a68;
+  --border: #d5dce3;
+  --border-strong: #9aa7b3;
+  --primary: #0b5cad;
+  --primary-contrast: #ffffff;
+  --primary-soft: #e3effa;
+  --focus: #0b5cad;
+  --shadow: 0 1px 2px rgb(16 32 48 / 0.06), 0 4px 14px rgb(16 32 48 / 0.07);
+  --shadow-raised: 0 2px 4px rgb(16 32 48 / 0.08), 0 10px 28px rgb(16 32 48 / 0.14);
+  --skeleton: #e3e8ed;
+  --skeleton-shine: #f1f4f7;
+
+  /* Status: colour-blind-safe hues (Okabe-Ito), always paired with icon + text. */
+  --ok: #0b6b4b;
+  --ok-bg: #dcf3e9;
+  --ok-fill: #009e73;
+  --watch: #6f4500;
+  --watch-bg: #fcebc2;
+  --watch-fill: #e69f00;
+  --danger: #a0300a;
+  --danger-bg: #fbe2d6;
+  --danger-fill: #d55e00;
+  --stale: #48545f;
+  --stale-bg: #e5e9ed;
+  --stale-fill: #8a949e;
+
+  /* Chart series */
+  --chart-rain: #2f7fd1;
+  --chart-prob: #7b4fb5;
+  --chart-level: #0b5cad;
+  --chart-grid: #dde3e9;
+  --chart-now: #14202b;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --tap: 44px;
+  --font: 'IBM Plex Sans Thai', system-ui, -apple-system, 'Segoe UI', 'Noto Sans Thai', sans-serif;
+  --header-h: 56px;
+  --nav-h: 64px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #0e151b;
+    --surface: #17212b;
+    --surface-2: #1f2c38;
+    --text: #e8eef3;
+    --text-muted: #a9b7c3;
+    --border: #2b3a48;
+    --border-strong: #5b6c7b;
+    --primary: #7cb9f7;
+    --primary-contrast: #06192b;
+    --primary-soft: #16314a;
+    --focus: #9ccbfa;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.28);
+    --shadow-raised: 0 2px 4px rgb(0 0 0 / 0.35), 0 10px 28px rgb(0 0 0 / 0.45);
+    --skeleton: #223040;
+    --skeleton-shine: #2c3c4d;
+    --ok: #7fe0bc;
+    --ok-bg: #0f3a2c;
+    --ok-fill: #1fbf8f;
+    --watch: #ffd27a;
+    --watch-bg: #45310a;
+    --watch-fill: #f0b429;
+    --danger: #ffb08c;
+    --danger-bg: #4a1e0c;
+    --danger-fill: #f0803c;
+    --stale: #b6c0ca;
+    --stale-bg: #2a343e;
+    --stale-fill: #7d8894;
+    --chart-rain: #6fb1f5;
+    --chart-prob: #c3a2ee;
+    --chart-level: #7cb9f7;
+    --chart-grid: #2b3a48;
+    --chart-now: #e8eef3;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0e151b;
+  --surface: #17212b;
+  --surface-2: #1f2c38;
+  --text: #e8eef3;
+  --text-muted: #a9b7c3;
+  --border: #2b3a48;
+  --border-strong: #5b6c7b;
+  --primary: #7cb9f7;
+  --primary-contrast: #06192b;
+  --primary-soft: #16314a;
+  --focus: #9ccbfa;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.28);
+  --shadow-raised: 0 2px 4px rgb(0 0 0 / 0.35), 0 10px 28px rgb(0 0 0 / 0.45);
+  --skeleton: #223040;
+  --skeleton-shine: #2c3c4d;
+  --ok: #7fe0bc;
+  --ok-bg: #0f3a2c;
+  --ok-fill: #1fbf8f;
+  --watch: #ffd27a;
+  --watch-bg: #45310a;
+  --watch-fill: #f0b429;
+  --danger: #ffb08c;
+  --danger-bg: #4a1e0c;
+  --danger-fill: #f0803c;
+  --stale: #b6c0ca;
+  --stale-bg: #2a343e;
+  --stale-fill: #7d8894;
+  --chart-rain: #6fb1f5;
+  --chart-prob: #c3a2ee;
+  --chart-level: #7cb9f7;
+  --chart-grid: #2b3a48;
+  --chart-now: #e8eef3;
+}

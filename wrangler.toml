@@ -1,0 +1,32 @@
+name = "flood-monitor"
+main = "worker/index.ts"
+compatibility_date = "2026-09-01"
+
+# Frontend build output. The Worker only runs for /api/*; everything else is static.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "flood-monitor"
+database_id = "00000000-0000-0000-0000-000000000000" # replaced in Phase 7 (wrangler d1 create)
+migrations_dir = "migrations"
+
+# Three triggers, one per group, so each group gets its own CPU budget on the free plan.
+# Every group still runs once every 10 minutes.
+[triggers]
+crons = [
+  "*/10 * * * *",    # rain stations (largest payload, runs alone)
+  "3-59/10 * * * *", # water level, Bangkok road sensors, radar
+  "6-59/10 * * * *", # highway announcements, CCTV list (daily), housekeeping
+]
+
+[observability]
+enabled = true
+
+# Secret (never in this file): TMD_API_TOKEN
+#   production: npx wrangler secret put TMD_API_TOKEN
+#   local dev:  .dev.vars  ->  TMD_API_TOKEN=...

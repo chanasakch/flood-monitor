@@ -1,0 +1,31 @@
+{
+  "name": "flood-monitor",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Thailand Flood Monitor — public read-only flood monitoring site",
+  "scripts": {
+    "dev": "npm run build && wrangler dev --test-scheduled",
+    "dev:web": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p worker/tsconfig.json",
+    "test": "vitest run",
+    "db:migrate:local": "wrangler d1 migrations apply flood-monitor --local",
+    "db:migrate:remote": "wrangler d1 migrations apply flood-monitor --remote",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans-thai": "^5.3.0",
+    "lucide-preact": "^1.49.0",
+    "maplibre-gl": "^6.11.2",
+    "preact": "^10.29.8",
+    "uplot": "^1.6.32"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261001.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.145.0"
+  }
+}
