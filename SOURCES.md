@@ -6,12 +6,12 @@ representative subset that keeps the edge cases found (null values, old timestam
 timestamps in the future). Personal data in the Department of Highways sample (reporter
 names, phone numbers) is replaced with `REDACTED`; the application never stores those fields.
 
-Status legend: **OK** = fetched and parsed · **PENDING** = waiting for something ·
+Status legend: **OK** = fetched and parsed ·
 **LINK-OUT** = no usable machine-readable source, the site links to the official page.
 
 | # | Source | Status | Used for |
 |---|---|---|---|
-| 1 | TMD NWP API | PENDING (needs `TMD_API_TOKEN`) | Hourly rain forecast, mm/h (primary) |
+| 1 | TMD NWP API | OK | Hourly rain forecast, mm/h (primary) |
 | 2 | Open-Meteo | OK | Rain probability %, fallback mm/h |
 | 3 | ThaiWater rain | OK | Station rainfall 1 h / 24 h, nationwide |
 | 4 | ThaiWater water level | OK | River / canal level with alert level, nationwide |
@@ -40,7 +40,10 @@ Whether each source also answers from Cloudflare's network (non-Thai IP) is reco
 - **No rain probability field exists in this API.** Probability (%) therefore always comes
   from Open-Meteo and is labelled as such.
 - Terms: registration required at data.tmd.go.th; token is personal to the account.
-- Status: **PENDING** — live sample not fetched yet, the token has to be set by the owner.
+- Verified live with the owner token: 200, 48 hourly rows, times as `2026-10-01T17:00:00+07:00`,
+  grid point snapped to the model (`location.lat/lon`). Header `x-ratelimit-limit: 60`.
+- Response shape: `WeatherForecasts[0].forecasts[] = { time, data: { rain, cond } }`.
+- Fixture: `tmd-nwp-hourly.json`
 
 ## 2. Open-Meteo — probability and fallback forecast
 
