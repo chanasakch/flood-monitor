@@ -86,8 +86,25 @@ function unpack(res: LayerResponse): Layer {
 
 const unpacked = new WeakMap<object, Layer>();
 
+const refreshListeners = new Set<() => void>();
+/** Fires a few seconds after the server started refreshing a layer, when newer data should be ready. */
+export function onLayerRefreshed(fn: () => void): () => void {
+  refreshListeners.add(fn);
+  return () => refreshListeners.delete(fn);
+}
+const pendingRefresh = new Set<string>();
+
 export async function getLayer(type: LayerType): Promise<Layer> {
-  const res = await cached<LayerResponse>(`/api/layers/${type}`, 60_000);
+  const url = `/api/layers/${type}`;
+  const res = await cached<LayerResponse>(url, 60_000);
+  if (res.refreshing && !pendingRefresh.has(url)) {
+    pendingRefresh.add(url);
+    setTimeout(() => {
+      pendingRefresh.delete(url);
+      mem.delete(url);
+      refreshListeners.forEach((fn) => fn());
+    }, 9000);
+  }
   let layer = unpacked.get(res);
   if (!layer) {
     layer = unpack(res);

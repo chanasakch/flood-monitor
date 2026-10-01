@@ -12,7 +12,7 @@ run_worker_first = ["/api/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "flood-monitor"
-database_id = "00000000-0000-0000-0000-000000000000" # replaced in Phase 7 (wrangler d1 create)
+database_id = "871293a1-9e12-44c3-a24d-55ebccc3f6e3"
 migrations_dir = "migrations"
 
 # Three triggers, one per group, so each group gets its own CPU budget on the free plan.
@@ -23,6 +23,13 @@ crons = [
   "3-59/10 * * * *", # water level, Bangkok road sensors, radar
   "6-59/10 * * * *", # highway announcements, CCTV list (daily), housekeeping
 ]
+
+# Run the Worker (including cron runs) near Bangkok. Several Thai government sources only answer
+# requests that arrive from inside Thailand; without this, cron runs land in other countries and
+# those sources reject them. This is Cloudflare's own placement setting, not a proxy.
+[placement]
+mode = "targeted"
+region = "aws:ap-southeast-7"
 
 [observability]
 enabled = true

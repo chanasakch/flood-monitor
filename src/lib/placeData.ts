@@ -63,6 +63,16 @@ export function mostSerious(list: Near[], now: number): Near | undefined {
   return best;
 }
 
+/**
+ * True when a layer has nothing to show because its source has not delivered: failed to load,
+ * never fetched, or failing with no stored data. Used to say "source unavailable" rather than
+ * "no station nearby", which would be wrong.
+ */
+export function layerDown(layers: Layers, type: LayerType): boolean {
+  const l = layers[type];
+  return !l || (l.items.length === 0 && (!l.fetched_at || (l.status?.consecutive_failures ?? 0) > 0));
+}
+
 /** Layers whose source is currently failing, for the "source unavailable" notice. */
 export function failingSources(layers: Layers): Layer[] {
   return Object.values(layers).filter((l): l is Layer => !!l && (l.status?.consecutive_failures ?? 0) > 0);

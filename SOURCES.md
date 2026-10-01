@@ -13,16 +13,21 @@ Status legend: **OK** = fetched and parsed ·
 |---|---|---|---|
 | 1 | TMD NWP API | OK | Hourly rain forecast, mm/h (primary) |
 | 2 | Open-Meteo | OK | Rain probability %, fallback mm/h |
-| 3 | ThaiWater rain | OK | Station rainfall 1 h / 24 h, nationwide |
-| 4 | ThaiWater water level | OK | River / canal level with alert level, nationwide |
+| 3 | ThaiWater rain | OK from Thailand, **blocked from Cloudflare Workers (429)** | Station rainfall 1 h / 24 h, nationwide |
+| 4 | ThaiWater water level | OK from Thailand, **blocked from Cloudflare Workers (429)** | River / canal level with alert level, nationwide |
 | 5 | TMD radar composite | OK (no CORS, no written licence) | Rain radar overlay |
 | 6 | BMA road flood sensors | OK | Road flood depth, Bangkok only |
-| 7 | BMA traffic CCTV | LINK-OUT (camera list OK, images not embeddable) | Camera locations, Bangkok only |
+| 7 | BMA traffic CCTV | LINK-OUT (camera list OK from Thailand, **unreachable from Cloudflare**) | Camera locations, Bangkok only |
 | 8 | Department of Highways HDMS | OK (undocumented) | Flooded / impassable highway reports |
 | 9 | Department of Highways CCTV | LINK-OUT | — |
 
-Whether each source also answers from Cloudflare's network (non-Thai IP) is recorded in
-"Reachability from the Worker" at the bottom once the Worker is deployed.
+The table above is what a normal Thai connection sees. What the deployed Worker can actually
+reach is in "Reachability from the Worker" at the bottom, and it differs for four sources.
+
+Staleness thresholds in use: BMA road sensors 60 min, ThaiWater rain and water level 180 min
+(stations report hourly and ThaiWater publishes 1.5-2.5 h after the observation: at 17:47 on
+the test day 53 % of rain stations and 28 % of water stations were 90-120 min old), radar
+30 min, forecasts 3 h, highway reports 24 h.
 
 ---
 
@@ -188,4 +193,43 @@ Whether each source also answers from Cloudflare's network (non-Thai IP) is reco
 
 ## Reachability from the Worker
 
-To be filled in after deployment (Phase 7).
+Checked on 2026-10-01 after deployment to `https://flood-monitor.flood-monitor.workers.dev`.
+"Cron" = scheduled runs, which Cloudflare executes wherever it has spare capacity (in practice
+outside Thailand; the `[placement]` setting does not move them). "Visit" = the Worker handling a
+visitor's request, which for visitors in Thailand runs at Cloudflare Bangkok (`colo=BKK`).
+
+| Source | From cron (abroad) | From a visit (Bangkok) | Result on the site |
+|---|---|---|---|
+| TMD NWP forecast | — (on demand only) | OK | Works |
+| Open-Meteo | — (on demand only) | OK | Works |
+| TMD radar composite | OK | OK | Works |
+| BMA road flood sensors | **403** | OK | Works, refreshed on visit |
+| Department of Highways HDMS | **520** | OK | Works, refreshed on visit |
+| ThaiWater rain | **429** | **429** | **Unavailable** |
+| ThaiWater water level | **429** | **429** | **Unavailable** |
+| BMA traffic CCTV list | **522** | **522** | **Unavailable**, link to the official site |
+
+Notes
+
+- **TMD NWP** only accepts old TLS 1.2 CBC cipher suites. Cloudflare's network connects fine;
+  the local `wrangler dev` runtime cannot ("Network connection lost"), so locally the forecast
+  always falls back to Open-Meteo. This is a local-development limitation only.
+- **BMA road sensors and Highways HDMS** refuse requests that arrive from outside Thailand.
+  They are therefore refreshed by the Worker when a visitor's request finds the stored data
+  older than ~10 minutes (`refreshOnVisit` in `worker/cron.ts`): at most one upstream request
+  per source per 10 minutes, the same volume as the cron. Before fetching, the Worker checks
+  its own egress country and does nothing unless it is `TH`. Consequence: with no visitors the
+  data is not refreshed and shows grey as "not current" until the next visit, and the road
+  sensor history only has points for periods when the site was being used.
+- **ThaiWater** (`api-v3.thaiwater.net`) is itself behind Cloudflare and answers every request
+  from a Cloudflare Worker, from any location, with `429` and the text
+  "การใช้งานถึง limit ที่กำหนด กรุณาติดต่อผู้ดูแลระบบ" (usage limit reached, contact the
+  administrator), within a few milliseconds. Requests from one Worker to another Cloudflare
+  customer leave from a small shared address pool, so ThaiWater's per-address limit is
+  effectively always exhausted for Workers. Five of five attempts failed; a normal Thai
+  connection gets `200`. No other official host serves the same data. Nothing was done to get
+  around the limit. Rain stations and water level therefore show as "source unavailable".
+- **BMA traffic CCTV** (`www.bmatraffic.com`, HTTP only) cannot be reached from Cloudflare at
+  all (`522`, connection timed out). The CCTV layer shows as unavailable and links to the site.
+- The Worker retries ThaiWater every 10 minutes and the camera list every 6 hours, so the
+  layers come back by themselves if access is opened.

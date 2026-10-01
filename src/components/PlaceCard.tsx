@@ -4,7 +4,7 @@ import { buildForecast, summarize } from '../lib/forecast';
 import { RADIUS_KM } from '../lib/geo';
 import { useAsync } from '../lib/hooks';
 import { t } from '../lib/i18n';
-import { mostSerious, summarizePlace, type Layers } from '../lib/placeData';
+import { layerDown, mostSerious, summarizePlace, type Layers } from '../lib/placeData';
 import type { Place, PlaceKind } from '../lib/places';
 import { ForecastSources } from './ForecastSources';
 import { Link } from './Link';
@@ -55,18 +55,18 @@ export function PlaceCard({ place, layers, now }: { place: Place; layers: Layers
         {rain ? (
           <ReadingRow reading={rain.reading} km={rain.km} now={now} label={t('rain.nearest')} />
         ) : (
-          <NoReadingRow type="rain" text={t('rain.none', { km: RADIUS_KM.rain })} />
+          <NoReadingRow type="rain" text={layerDown(layers, 'rain') ? t('common.sourceDown') : t('rain.none', { km: RADIUS_KM.rain })} />
         )}
         {water ? (
           <ReadingRow reading={water.reading} km={water.km} now={now} label={t('water.nearest')} />
         ) : (
-          <NoReadingRow type="water" text={t('water.none', { km: RADIUS_KM.water })} />
+          <NoReadingRow type="water" text={layerDown(layers, 'water') ? t('common.sourceDown') : t('water.none', { km: RADIUS_KM.water })} />
         )}
         {s.roadApplies &&
           (road ? (
             <ReadingRow reading={road.reading} km={road.km} now={now} label={t('road.nearest')} />
           ) : (
-            <NoReadingRow type="road" text={t('road.none', { km: RADIUS_KM.road })} />
+            <NoReadingRow type="road" text={layerDown(layers, 'road') ? t('common.sourceDown') : t('road.none', { km: RADIUS_KM.road })} />
           ))}
         {highway && <ReadingRow reading={highway.reading} km={highway.km} now={now} label={t('highway.nearby')} />}
       </div>

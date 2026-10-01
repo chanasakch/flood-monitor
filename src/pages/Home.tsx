@@ -5,6 +5,7 @@ import { PlaceCard } from '../components/PlaceCard';
 import { PlaceDialog, readDraft, type PlaceDraft } from '../components/PlaceDialog';
 import { CardSkeleton, EmptyState, ErrorState } from '../components/States';
 import { Banner, sourceName } from '../components/Status';
+import { onLayerRefreshed } from '../lib/api';
 import { useAsync, useNow, useSubscription } from '../lib/hooks';
 import { t } from '../lib/i18n';
 import { failingSources, loadLayers } from '../lib/placeData';
@@ -33,6 +34,7 @@ export function Home({ route }: { route: Route }) {
   const places = loadPlaces();
   const now = useNow();
   const data = useAsync(() => loadLayers([...HOME_LAYERS]), [], 5 * 60_000);
+  useEffect(() => onLayerRefreshed(data.reload), [data.reload]);
   const [draft, setDraft] = useState<PlaceDraft | null>(null);
 
   useEffect(() => {

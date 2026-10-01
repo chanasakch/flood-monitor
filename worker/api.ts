@@ -10,6 +10,7 @@ import type {
   SourcesResponse,
   SourceStatus,
 } from '../shared/types';
+import { refreshOnVisit } from './cron';
 import { cacheGet, cachePut, getAllStatuses, getSnapshot, getStatus, recordFailure, recordSuccess } from './db';
 import type { Env } from './env';
 import { fetchOpenMeteo } from './fetchers/open-meteo';
@@ -52,13 +53,17 @@ function emptyStatus(source: SourceId): SourceStatus {
 
 // ---------- /api/layers/:type ----------
 
-async function layer(env: Env, type: LayerType): Promise<Response> {
+async function layer(env: Env, ctx: ExecutionContext, type: LayerType): Promise<Response> {
   const source = LAYER_SOURCE[type];
   const [snap, status] = await Promise.all([getSnapshot(env.DB, type), getStatus(env.DB, source)]);
-  const head = JSON.stringify({ type, fetched_at: snap?.fetched_at ?? null, status: status ?? emptyStatus(source) });
+  // Thailand-only sources are refreshed here, in the background, when their data is due.
+  // This response still carries the stored data; `refreshing` tells the page to ask again shortly.
+  const refresh = await refreshOnVisit(env, type, snap?.fetched_at ?? null).catch(() => null);
+  if (refresh) ctx.waitUntil(refresh);
+  const head = JSON.stringify({ type, fetched_at: snap?.fetched_at ?? null, status: status ?? emptyStatus(source), refreshing: !!refresh });
   // The stored body is already `{"defaults":...,"items":[...]}`; splice it in without re-parsing megabytes of JSON.
   const body = snap ? `${head.slice(0, -1)},${snap.body.slice(1)}` : `${head.slice(0, -1)},"defaults":{},"items":[]}`;
-  return json(body, { maxAge: 60 });
+  return json(body, { maxAge: refresh ? 0 : 60 });
 }
 
 async function radar(env: Env): Promise<Response> {
@@ -274,7 +279,7 @@ async function sources(env: Env): Promise<Response> {
 
 // ---------- router ----------
 
-export async function handleApi(request: Request, env: Env): Promise<Response> {
+export async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   if (request.method !== 'GET' && request.method !== 'HEAD') return error(405, 'method_not_allowed');
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '');
@@ -286,7 +291,7 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
     if (path === '/api/layers/radar') return await radar(env);
     if (path.startsWith('/api/layers/')) {
       const type = path.slice('/api/layers/'.length) as LayerType;
-      return LAYER_TYPES.includes(type) ? await layer(env, type) : error(404, 'unknown_layer');
+      return LAYER_TYPES.includes(type) ? await layer(env, ctx, type) : error(404, 'unknown_layer');
     }
     if (path.startsWith('/api/history/')) return await history(env, decodeURIComponent(path.slice('/api/history/'.length)));
     return error(404, 'not_found');

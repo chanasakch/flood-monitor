@@ -55,6 +55,8 @@ export interface LayerResponse {
   /** When our Worker last fetched this layer successfully. Null if it never has. */
   fetched_at: string | null;
   status: SourceStatus | null;
+  /** True when this request started a background refresh: ask again in a few seconds for newer data. */
+  refreshing?: boolean;
   defaults: Partial<Reading>;
   items: PackedReading[];
 }

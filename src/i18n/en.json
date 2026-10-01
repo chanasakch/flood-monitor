@@ -178,7 +178,9 @@
     "nearby": "CCTV cameras near this place",
     "none": "No camera within {km} km",
     "dohLink": "Highway cameras open on the Department of Highways website",
-    "legend": "Camera position. Tap to open the original page."
+    "legend": "Camera position. Tap to open the original page.",
+    "unavailable": "The camera list cannot be fetched from the BMA website right now. Please open the original website.",
+    "bmaLink": "Bangkok traffic cameras open on the BMA Traffic website"
   },
   "radar": {
     "layer": "Rain radar",

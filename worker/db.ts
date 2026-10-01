@@ -73,7 +73,9 @@ export async function recordFailure(
   durationMs: number,
 ): Promise<void> {
   const msg = message.slice(0, 300);
-  await db.batch([
+  const before = await getStatus(db, source);
+  const streak = before?.consecutive_failures ?? 0;
+  const stmts = [
     db
       .prepare(
         `INSERT INTO source_status (source, last_attempt_at, last_error_at, last_error, consecutive_failures, duration_ms)
@@ -82,8 +84,13 @@ export async function recordFailure(
            consecutive_failures = consecutive_failures + 1, duration_ms = ?4`,
       )
       .bind(source, at, msg, durationMs),
-    db.prepare('INSERT INTO fetch_log (source, at, ok, message, duration_ms) VALUES (?, ?, 0, ?, ?)').bind(source, at, msg, durationMs),
-  ]);
+  ];
+  // Log the start of a failure streak, a changed error, and a reminder every 36 failures (~6 h),
+  // rather than one row per attempt.
+  if (streak === 0 || before?.last_error !== msg || streak % 36 === 0) {
+    stmts.push(db.prepare('INSERT INTO fetch_log (source, at, ok, message, duration_ms) VALUES (?, ?, 0, ?, ?)').bind(source, at, msg, durationMs));
+  }
+  await db.batch(stmts);
 }
 
 export interface CacheRow {

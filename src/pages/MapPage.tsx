@@ -10,7 +10,7 @@ import { MiniForecast } from '../components/MiniForecast';
 import { ReadingRow, TYPE_ICON } from '../components/ReadingRow';
 import { Skeleton } from '../components/States';
 import { Banner, Chip, LevelIcon, SourceLine, sourceName, sourceShortName } from '../components/Status';
-import { getForecast, getLayer, getRadar, type Layer } from '../lib/api';
+import { getForecast, getLayer, getRadar, onLayerRefreshed, type Layer } from '../lib/api';
 import { buildForecast, summarize } from '../lib/forecast';
 import { formatNumber, formatTime } from '../lib/format';
 import { inThailand } from '../lib/geo';
@@ -318,6 +318,8 @@ export function MapPage({ route }: { route: Route }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, refresh]);
+
+  useEffect(() => onLayerRefreshed(() => setRefresh((n) => n + 1)), []);
 
   // Refresh every 2 minutes while the page is visible.
   useEffect(() => {

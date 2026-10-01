@@ -1,6 +1,6 @@
 import { LAYER_SOURCE } from '../shared/sources';
 import type { LayerType, Reading, SourceId } from '../shared/types';
-import { getSnapshot, prune, putSnapshot, recordFailure, recordSuccess } from './db';
+import { getSnapshot, getStatus, prune, putSnapshot, recordFailure, recordSuccess } from './db';
 import type { Env } from './env';
 import { fetchCctv } from './fetchers/bma-cctv';
 import { fetchRoad } from './fetchers/bma-road';
@@ -15,6 +15,55 @@ export const CRON_SENSORS = '3-59/10 * * * *';
 export const CRON_ANNOUNCE = '6-59/10 * * * *';
 
 const CCTV_REFRESH_MS = 24 * 3600 * 1000;
+
+/**
+ * Sources that only answer requests arriving from inside Thailand (verified, see SOURCES.md).
+ * Cloudflare runs cron triggers wherever it has spare capacity, usually abroad, so these are
+ * refreshed from the request path instead (see `refreshOnVisit`), where the Worker runs at the
+ * visitor's nearest location. Cron still runs them whenever it happens to execute in Thailand.
+ */
+export const THAILAND_ONLY: Partial<Record<LayerType, JobName>> = { road: 'road', highway: 'highway' };
+const REFRESH_AFTER_MS = 9.5 * 60 * 1000;
+const RETRY_AFTER_MS = 2 * 60 * 1000;
+
+/** Country this invocation's outgoing requests come from, per Cloudflare's own trace endpoint. */
+export async function egressCountry(): Promise<string | null> {
+  try {
+    const res = await fetch('https://www.cloudflare.com/cdn-cgi/trace', { signal: AbortSignal.timeout(4000) });
+    return /^loc=([A-Z]{2})$/m.exec(await res.text())?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Called when a visitor requests a Thailand-only layer. If the stored data is older than one
+ * cron interval, claim the refresh (so concurrent visitors trigger a single upstream call) and
+ * run it. Upstream volume stays at most one request per source per ~10 minutes.
+ * Returns a promise for `ctx.waitUntil` when a refresh was started, otherwise null.
+ */
+export async function refreshOnVisit(env: Env, layer: LayerType, fetchedAt: string | null): Promise<Promise<void> | null> {
+  const job = THAILAND_ONLY[layer];
+  if (!job) return null;
+  const now = Date.now();
+  if (fetchedAt && now - Date.parse(fetchedAt) < REFRESH_AFTER_MS) return null;
+  const source = LAYER_SOURCE[layer];
+  const nowIso = new Date(now).toISOString();
+  const retryBefore = new Date(now - RETRY_AFTER_MS).toISOString();
+  // Atomic claim: only one request gets `changes = 1` inside the retry window.
+  await env.DB.prepare('INSERT OR IGNORE INTO source_status (source) VALUES (?)').bind(source).run();
+  const claim = await env.DB.prepare(
+    'UPDATE source_status SET last_attempt_at = ?1 WHERE source = ?2 AND (last_attempt_at IS NULL OR last_attempt_at < ?3)',
+  )
+    .bind(nowIso, source, retryBefore)
+    .run();
+  if (!claim.meta.changes) return null;
+  return (async () => {
+    // Outside Thailand the source would refuse; that is not a source failure, so do not record one.
+    if ((await egressCountry()) !== 'TH') return;
+    await JOBS[job](env);
+  })();
+}
 
 /**
  * Run one source. On success its data replaces the stored snapshot. On any failure the previous
@@ -122,6 +171,9 @@ const JOBS = {
     // The camera directory rarely changes: refresh once a day.
     const current = await getSnapshot(env.DB, 'cctv');
     if (current && Date.now() - Date.parse(current.fetched_at) < CCTV_REFRESH_MS) return;
+    // While the site is unreachable, try again every 6 hours instead of every run.
+    const status = await getStatus(env.DB, 'bma-cctv');
+    if (status?.consecutive_failures && status.last_attempt_at && Date.now() - Date.parse(status.last_attempt_at) < 6 * 3600 * 1000) return;
     await runSource(env, 'bma-cctv', async () => storeLayer(env, 'cctv', await fetchCctv()));
   },
 };
@@ -132,14 +184,21 @@ export async function runJobs(env: Env, names: JobName[]): Promise<void> {
   await Promise.allSettled(names.map((n) => JOBS[n](env)));
 }
 
+/** Drop Thailand-only jobs unless this cron run happens to execute in Thailand. */
+async function reachable(names: JobName[]): Promise<JobName[]> {
+  const restricted = new Set<JobName>(Object.values(THAILAND_ONLY));
+  if (!names.some((n) => restricted.has(n))) return names;
+  return (await egressCountry()) === 'TH' ? names : names.filter((n) => !restricted.has(n));
+}
+
 export async function runCron(env: Env, cron: string, scheduledTime: number): Promise<void> {
   switch (cron) {
     case CRON_RAIN:
       return runJobs(env, ['rain']);
     case CRON_SENSORS:
-      return runJobs(env, ['water', 'road', 'radar']);
+      return runJobs(env, await reachable(['water', 'road', 'radar']));
     case CRON_ANNOUNCE: {
-      await runJobs(env, ['highway', 'cctv']);
+      await runJobs(env, await reachable(['highway', 'cctv']));
       // Housekeeping once a day, around 03:06 Thai time (20:06 UTC).
       const d = new Date(scheduledTime);
       if (d.getUTCHours() === 20 && d.getUTCMinutes() < 10) await prune(env.DB, scheduledTime);

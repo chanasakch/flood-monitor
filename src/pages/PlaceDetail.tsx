@@ -1,5 +1,5 @@
 import { ArrowLeft, Camera, ExternalLink, Map as MapIcon, Pencil, Save, Trash2 } from 'lucide-preact';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { SOURCES } from '../../shared/sources';
 import type { HistoryPoint, Reading } from '../../shared/types';
 import { ForecastSources } from '../components/ForecastSources';
@@ -9,13 +9,13 @@ import { KIND_ICON, OverallBanner } from '../components/PlaceCard';
 import { NoReadingRow, ReadingRow } from '../components/ReadingRow';
 import { CardSkeleton, EmptyState, ErrorState, Skeleton } from '../components/States';
 import { Banner, Chip, SourceLine, sourceName } from '../components/Status';
-import { getForecast, getHistory } from '../lib/api';
+import { getForecast, getHistory, onLayerRefreshed } from '../lib/api';
 import { buildForecast, summarize } from '../lib/forecast';
 import { formatDateTime, formatKm, formatNumber, formatTime } from '../lib/format';
 import { inThailand, RADIUS_KM } from '../lib/geo';
 import { useAsync, useNow, useSubscription } from '../lib/hooks';
 import { pick, t } from '../lib/i18n';
-import { failingSources, loadLayers, summarizePlace } from '../lib/placeData';
+import { failingSources, layerDown, loadLayers, summarizePlace } from '../lib/placeData';
 import { deletePlace, getPlace, onPlacesChange } from '../lib/places';
 import { navigate } from '../lib/router';
 import { shown } from '../lib/status';
@@ -325,6 +325,7 @@ export function PlaceDetail({ path }: { path: string }) {
   const now = useNow();
   const target = resolveTarget(path);
   const data = useAsync(() => loadLayers([...DETAIL_LAYERS]), [], 5 * 60_000);
+  useEffect(() => onLayerRefreshed(data.reload), [data.reload]);
 
   if (target === 'not-found' || target === 'outside') {
     return (
@@ -346,6 +347,7 @@ export function PlaceDetail({ path }: { path: string }) {
   const KindIcon = KIND_ICON[target.kind];
   const s = data.data ? summarizePlace(lat, lng, data.data.layers, now) : null;
   const failing = data.data ? failingSources(data.data.layers) : [];
+  const down = (type: 'rain' | 'water' | 'road' | 'highway' | 'cctv') => !!data.data && layerDown(data.data.layers, type);
   const mapLink = `/map?lat=${lat}&lng=${lng}&z=13`;
 
   const remove = () => {
@@ -423,23 +425,23 @@ export function PlaceDetail({ path }: { path: string }) {
                 {s.rain.length ? (
                   s.rain.map((n) => <ReadingRow key={n.reading.id} reading={n.reading} km={n.km} now={now} />)
                 ) : (
-                  <NoReadingRow type="rain" text={t('rain.none', { km: RADIUS_KM.rain })} />
+                  <NoReadingRow type="rain" text={down('rain') ? t('common.sourceDown') : t('rain.none', { km: RADIUS_KM.rain })} />
                 )}
                 {s.water.length ? (
                   s.water.map((n) => <ReadingRow key={n.reading.id} reading={n.reading} km={n.km} now={now} />)
                 ) : (
-                  <NoReadingRow type="water" text={t('water.none', { km: RADIUS_KM.water })} />
+                  <NoReadingRow type="water" text={down('water') ? t('common.sourceDown') : t('water.none', { km: RADIUS_KM.water })} />
                 )}
                 {s.roadApplies &&
                   (s.road.length ? (
                     s.road.map((n) => <ReadingRow key={n.reading.id} reading={n.reading} km={n.km} now={now} />)
                   ) : (
-                    <NoReadingRow type="road" text={t('road.none', { km: RADIUS_KM.road })} note={t('road.onlyBkk')} />
+                    <NoReadingRow type="road" text={down('road') ? t('common.sourceDown') : t('road.none', { km: RADIUS_KM.road })} note={t('road.onlyBkk')} />
                   ))}
                 {s.highway.length ? (
                   s.highway.map((n) => <ReadingRow key={n.reading.id} reading={n.reading} km={n.km} now={now} />)
                 ) : (
-                  <NoReadingRow type="highway" text={t('highway.none', { km: RADIUS_KM.highway })} note={t('highway.noneNote')} />
+                  <NoReadingRow type="highway" text={down('highway') ? t('common.sourceDown') : t('highway.none', { km: RADIUS_KM.highway })} note={t('highway.noneNote')} />
                 )}
               </div>
             </section>
@@ -487,8 +489,14 @@ export function PlaceDetail({ path }: { path: string }) {
                   </p>
                 </>
               ) : (
-                <p class="muted">{t('cctv.none', { km: RADIUS_KM.cctv })}</p>
+                <p class="muted">{down('cctv') ? t('cctv.unavailable') : t('cctv.none', { km: RADIUS_KM.cctv })}</p>
               )}
+              <p class="small cctv-doh">
+                <ExtLink href={SOURCES['bma-cctv'].url}>
+                  {t('cctv.bmaLink')} <ExternalLink size={13} aria-hidden="true" />
+                  <span class="sr-only">{t('common.newTab')}</span>
+                </ExtLink>
+              </p>
               <p class="small cctv-doh">
                 <ExtLink href="https://highwaytraffic.go.th/DOHWeb/Home.aspx">
                   {t('cctv.dohLink')} <ExternalLink size={13} aria-hidden="true" />
