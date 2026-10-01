@@ -344,7 +344,7 @@ export function PlaceDetail({ path }: { path: string }) {
 
   const { lat, lng } = target;
   const KindIcon = KIND_ICON[target.kind];
-  const s = data.data ? summarizePlace(lat, lng, data.data.layers, now, 2) : null;
+  const s = data.data ? summarizePlace(lat, lng, data.data.layers, now) : null;
   const failing = data.data ? failingSources(data.data.layers) : [];
   const mapLink = `/map?lat=${lat}&lng=${lng}&z=13`;
 

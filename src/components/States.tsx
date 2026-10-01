@@ -24,7 +24,7 @@ export function ErrorState({ onRetry, message }: { onRetry?: () => void; message
       <span class="state-icon">
         <CloudOff size={26} aria-hidden="true" />
       </span>
-      <h3>{message ?? t('common.loadError')}</h3>
+      <p class="state-title">{message ?? t('common.loadError')}</p>
       <p>{t('common.loadErrorHint')}</p>
       {onRetry && (
         <div class="btn-row">
@@ -42,7 +42,7 @@ export function EmptyState({ icon, title, text, children }: { icon: ComponentChi
   return (
     <div class="state">
       <span class="state-icon">{icon}</span>
-      <h3>{title}</h3>
+      <p class="state-title">{title}</p>
       {text && <p>{text}</p>}
       {children && <div class="btn-row">{children}</div>}
     </div>

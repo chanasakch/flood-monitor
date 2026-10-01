@@ -2,7 +2,7 @@
    poor signal. Cached API data keeps its original observation times, so the page still greys
    it out as "not current" when it is old. */
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL = `fm-shell-${VERSION}`;
 const DATA = `fm-data-${VERSION}`;
 const SHELL_URLS = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png'];
@@ -37,7 +37,9 @@ async function fromCache(cache, request) {
 async function apiNetworkFirst(request) {
   const cache = await caches.open(DATA);
   try {
-    const res = await fetch(request);
+    // Bypass the browser's HTTP cache: this worker keeps its own copy, and going straight to the
+    // network is the only way to notice that the connection is gone.
+    const res = await fetch(request, { cache: 'no-store' });
     if (res.ok) cache.put(request, res.clone());
     return res;
   } catch (err) {

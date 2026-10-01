@@ -676,11 +676,11 @@ thead th:first-child {
 }
 
 /* MapLibre controls: larger touch targets, themed. */
-.maplibregl-ctrl-group button {
+.map-area .maplibregl-ctrl-group button {
   width: 44px;
   height: 44px;
 }
-.maplibregl-ctrl-group {
+.map-area .maplibregl-ctrl-group {
   border-radius: 12px;
   overflow: hidden;
 }

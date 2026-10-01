@@ -4,7 +4,7 @@ import { buildForecast, summarize } from '../lib/forecast';
 import { RADIUS_KM } from '../lib/geo';
 import { useAsync } from '../lib/hooks';
 import { t } from '../lib/i18n';
-import { summarizePlace, type Layers } from '../lib/placeData';
+import { mostSerious, summarizePlace, type Layers } from '../lib/placeData';
 import type { Place, PlaceKind } from '../lib/places';
 import { ForecastSources } from './ForecastSources';
 import { Link } from './Link';
@@ -25,6 +25,10 @@ export function OverallBanner({ level }: { level: ReturnType<typeof summarizePla
 
 export function PlaceCard({ place, layers, now }: { place: Place; layers: Layers; now: number }) {
   const s = summarizePlace(place.lat, place.lng, layers, now);
+  const rain = mostSerious(s.rain, now);
+  const water = mostSerious(s.water, now);
+  const road = mostSerious(s.road, now);
+  const highway = mostSerious(s.highway, now);
   const fc = useAsync(() => getForecast(place.lat, place.lng), [place.lat, place.lng], 10 * 60_000);
   const view = fc.data ? buildForecast(fc.data, now, 12) : null;
   const summary = view ? summarize(view) : null;
@@ -48,26 +52,26 @@ export function PlaceCard({ place, layers, now }: { place: Place; layers: Layers
       <OverallBanner level={s.overall} />
 
       <div class="readings">
-        {s.rain[0] ? (
-          <ReadingRow reading={s.rain[0].reading} km={s.rain[0].km} now={now} label={t('rain.nearest')} />
+        {rain ? (
+          <ReadingRow reading={rain.reading} km={rain.km} now={now} label={t('rain.nearest')} />
         ) : (
           <NoReadingRow type="rain" text={t('rain.none', { km: RADIUS_KM.rain })} />
         )}
-        {s.water[0] ? (
-          <ReadingRow reading={s.water[0].reading} km={s.water[0].km} now={now} label={t('water.nearest')} />
+        {water ? (
+          <ReadingRow reading={water.reading} km={water.km} now={now} label={t('water.nearest')} />
         ) : (
           <NoReadingRow type="water" text={t('water.none', { km: RADIUS_KM.water })} />
         )}
         {s.roadApplies &&
-          (s.road[0] ? (
-            <ReadingRow reading={s.road[0].reading} km={s.road[0].km} now={now} label={t('road.nearest')} />
+          (road ? (
+            <ReadingRow reading={road.reading} km={road.km} now={now} label={t('road.nearest')} />
           ) : (
             <NoReadingRow type="road" text={t('road.none', { km: RADIUS_KM.road })} />
           ))}
-        {s.highway[0] && <ReadingRow reading={s.highway[0].reading} km={s.highway[0].km} now={now} label={t('highway.nearby')} />}
+        {highway && <ReadingRow reading={highway.reading} km={highway.km} now={now} label={t('highway.nearby')} />}
       </div>
 
-      <section class="mini-block" aria-label={t('forecast.next12')}>
+      <div class="mini-block">
         <h3 class="mini-title">{t('forecast.next12')}</h3>
         {fc.loading && !view && <Skeleton h={78} />}
         {!fc.loading && !view?.mmSource && <Chip level="unknown" label={t('forecast.unavailable')} wrap />}
@@ -79,7 +83,7 @@ export function PlaceCard({ place, layers, now }: { place: Place; layers: Layers
             <ForecastSources res={fc.data} view={view} now={now} />
           </>
         )}
-      </section>
+      </div>
 
       <Link to={to} class="btn btn-secondary btn-block">
         {t('common.details')}
