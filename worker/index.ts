@@ -1,14 +1,12 @@
+import { handleApi } from './api';
 import { runCron } from './cron';
 import type { Env } from './env';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (url.pathname === '/api/health') {
-      const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM source_status').first<{ n: number }>();
-      return Response.json({ ok: true, sources_seen: row?.n ?? 0 });
-    }
-    if (url.pathname.startsWith('/api/')) return Response.json({ error: 'not found' }, { status: 404 });
+    if (url.pathname.startsWith('/api/')) return handleApi(request, env);
+    // Everything else is the static frontend (served directly by the assets layer in production).
     return env.ASSETS.fetch(request);
   },
 

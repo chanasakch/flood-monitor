@@ -1,8 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import type { Reading } from '../shared/types';
 
-const dir = fileURLToPath(new URL('../fixtures/', import.meta.url));
+const dir = decodeURIComponent(new URL('../fixtures/', import.meta.url).pathname);
 
 export const fixtureText = (name: string): string => readFileSync(dir + name, 'utf8');
 export const fixtureJson = (name: string): unknown => JSON.parse(fixtureText(name));

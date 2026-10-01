@@ -8,7 +8,7 @@
     "dev": "npm run build && wrangler dev --test-scheduled",
     "dev:web": "vite",
     "build": "vite build",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p worker/tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p worker/tsconfig.json && tsc --noEmit -p test/tsconfig.json",
     "test": "vitest run",
     "db:migrate:local": "wrangler d1 migrations apply flood-monitor --local",
     "db:migrate:remote": "wrangler d1 migrations apply flood-monitor --remote",
@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261001.1",
+    "@types/node": "^26.6.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.2",
     "vitest": "^5.0.3",
