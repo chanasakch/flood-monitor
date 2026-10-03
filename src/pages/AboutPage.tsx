@@ -1,7 +1,7 @@
 import { ExternalLink, Phone } from 'lucide-preact';
 import { SOURCE_IDS, SOURCES } from '../../shared/sources';
 import type { Level } from '../../shared/types';
-import { ExtLink } from '../components/Link';
+import { ExtLink, Link } from '../components/Link';
 import { Chip, sourceName } from '../components/Status';
 import { t } from '../lib/i18n';
 
@@ -109,6 +109,10 @@ export function AboutPage() {
             ))}
           </ul>
         </section>
+
+        <p class="small admin-link">
+          <Link to="/admin">{t('admin.link')}</Link>
+        </p>
       </div>
     </>
   );

@@ -58,3 +58,32 @@ export async function accountInfo(token: string): Promise<LineAccount> {
     used: typeof usage.totalUsage === 'number' ? usage.totalUsage : 0,
   };
 }
+
+/** Send to chosen people (user ids from webhook events). Costs one message per person. */
+export async function multicast(token: string, userIds: string[], text: string): Promise<void> {
+  await call(token, '/message/multicast', {
+    method: 'POST',
+    headers: { 'x-line-retry-key': crypto.randomUUID() },
+    body: JSON.stringify({ to: userIds.slice(0, 500), messages: [{ type: 'text', text: text.slice(0, 4900) }] }),
+  });
+}
+
+/** Answer a webhook event. Replies are free and do not use the monthly quota. */
+export async function reply(token: string, replyToken: string, text: string): Promise<void> {
+  await call(token, '/message/reply', { method: 'POST', body: JSON.stringify({ replyToken, messages: [{ type: 'text', text }] }) });
+}
+
+/** Display name of someone who follows the account. */
+export async function profile(token: string, userId: string): Promise<string | null> {
+  const p = (await call(token, `/profile/${encodeURIComponent(userId)}`)) as { displayName?: string };
+  return p.displayName ?? null;
+}
+
+export async function webhookEndpoint(token: string): Promise<{ endpoint: string | null; active: boolean }> {
+  const r = (await call(token, '/channel/webhook/endpoint')) as { endpoint?: string; active?: boolean };
+  return { endpoint: r.endpoint ?? null, active: !!r.active };
+}
+
+export async function setWebhookEndpoint(token: string, endpoint: string): Promise<void> {
+  await call(token, '/channel/webhook/endpoint', { method: 'PUT', body: JSON.stringify({ endpoint }) });
+}

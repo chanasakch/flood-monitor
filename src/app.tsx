@@ -8,6 +8,7 @@ import { useSubscription } from './lib/hooks';
 import { onLangChange, t } from './lib/i18n';
 import { useRoute } from './lib/router';
 import { AboutPage } from './pages/AboutPage';
+import { AdminPage } from './pages/AdminPage';
 import { Home } from './pages/Home';
 import { MapPage } from './pages/MapPage';
 import { PlaceDetail } from './pages/PlaceDetail';
@@ -17,6 +18,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/map/, 'map.title'],
   [/^\/sources/, 'sources.title'],
   [/^\/about/, 'about.title'],
+  [/^\/admin/, 'admin.title'],
   [/^\//, 'home.title'],
 ];
 
@@ -61,6 +63,8 @@ export function App() {
           <SourcesPage />
         ) : path === '/about' ? (
           <AboutPage />
+        ) : path === '/admin' ? (
+          <AdminPage />
         ) : (
           <Home route={route} />
         )}

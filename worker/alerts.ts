@@ -54,13 +54,23 @@ async function checkAccount(env: Env, token: string, force = false): Promise<Sto
 
 async function recentSends(env: Env): Promise<SentRow[]> {
   const since = new Date(Date.now() - 40 * 86400000).toISOString();
-  const { results } = await env.DB.prepare('SELECT sent_at, kind, ok FROM alert_log WHERE sent_at >= ? ORDER BY sent_at').bind(since).all<SentRow>();
+  // Manual sends from the admin page are not automatic alerts; they only reduce the quota (below).
+  const { results } = await env.DB.prepare("SELECT sent_at, kind, ok FROM alert_log WHERE sent_at >= ? AND kind != 'manual' ORDER BY sent_at").bind(since).all<SentRow>();
   return results;
 }
 
+/** Messages used this month by manual sends, which come out of the same LINE quota. */
+async function manualMessagesThisMonth(env: Env): Promise<number> {
+  const monthStart = new Date(Date.parse(new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 7) + '-01T00:00:00+07:00')).toISOString();
+  const row = await env.DB.prepare("SELECT COALESCE(SUM(recipients), 0) AS n FROM alert_log WHERE kind = 'manual' AND ok = 1 AND sent_at >= ?")
+    .bind(monthStart)
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
 async function logSend(env: Env, kind: 'alert' | 'quota', areas: string[], message: string, ok: boolean, error: string | null): Promise<void> {
-  await env.DB.prepare('INSERT INTO alert_log (sent_at, kind, areas, message, ok, error) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(new Date().toISOString(), kind, areas.join(','), message, ok ? 1 : 0, error)
+  await env.DB.prepare('INSERT INTO alert_log (sent_at, kind, areas, message, ok, error, recipients) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(new Date().toISOString(), kind, areas.join(','), message, ok ? 1 : 0, error, Number(env.ALERT_RECIPIENTS) || ALERT_LIMITS.recipients)
     .run();
 }
 
@@ -75,7 +85,7 @@ export async function runAlerts(env: Env): Promise<void> {
   const siteUrl = env.SITE_URL ?? 'https://flood-monitor.flood-monitor.workers.dev';
   const account = token ? await checkAccount(env, token) : null;
 
-  const cap = monthlySendCap(account?.quota ?? ALERT_LIMITS.monthlyQuota, Number(env.ALERT_RECIPIENTS) || ALERT_LIMITS.recipients);
+  const cap = monthlySendCap((account?.quota ?? ALERT_LIMITS.monthlyQuota) - (await manualMessagesThisMonth(env)), Number(env.ALERT_RECIPIENTS) || ALERT_LIMITS.recipients);
   const decision = decide(await recentSends(env), now, cap);
   if (decision.send === false) return;
 
@@ -134,10 +144,10 @@ export async function alertsStatus(env: Env): Promise<AlertsStatus> {
   const token = env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
   const account = await readStatus(env);
   const recipients = Number(env.ALERT_RECIPIENTS) || ALERT_LIMITS.recipients;
-  const cap = monthlySendCap(account?.quota ?? ALERT_LIMITS.monthlyQuota, recipients);
+  const cap = monthlySendCap((account?.quota ?? ALERT_LIMITS.monthlyQuota) - (await manualMessagesThisMonth(env)), recipients);
   const month = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 7);
   const rows = (await recentSends(env)).filter((r) => new Date(Date.parse(r.sent_at) + 7 * 3600000).toISOString().startsWith(month));
-  const last = await env.DB.prepare('SELECT sent_at, ok, error FROM alert_log ORDER BY id DESC LIMIT 1').first<{ sent_at: string; ok: number; error: string | null }>();
+  const last = await env.DB.prepare("SELECT sent_at, ok, error FROM alert_log WHERE kind != 'manual' ORDER BY id DESC LIMIT 1").first<{ sent_at: string; ok: number; error: string | null }>();
   return {
     configured: !!token,
     account_ok: account?.ok ?? null,

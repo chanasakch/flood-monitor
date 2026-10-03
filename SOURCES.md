@@ -210,6 +210,12 @@ The search box only moves the map or opens a point; it never supplies readings.
 - Free plan (Thailand): 300 messages a month, counted per recipient
   (https://developers.line.biz/en/docs/messaging-api/pricing/). With 6 people: 48 sends a month.
 - Alerts are computed from the TMD and Open-Meteo forecasts only (`shared/alerts.ts`).
+- Admin page `/admin`: manual sends via broadcast or `POST /v2/bot/message/multicast`.
+- Webhook `POST /api/line/webhook` (signature checked with `LINE_CHANNEL_SECRET`) stores the
+  user id and display name (`GET /v2/bot/profile/{userId}`) of people who follow or message the
+  account, so the admin can choose recipients. Unverified accounts cannot list followers
+  (`/v2/bot/followers/ids` is for verified/premium accounts only). Message contents are not stored.
+  The first contact gets a free reply confirming registration.
 
 ## Map and other third-party resources
 

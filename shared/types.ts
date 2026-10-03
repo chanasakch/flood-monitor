@@ -167,3 +167,19 @@ export interface SearchResponse {
   /** Set when the place-name service could not be reached; the built-in list still works. */
   error?: string;
 }
+
+export interface LineUser {
+  user_id: string;
+  display_name: string | null;
+  following: boolean;
+  first_seen: string;
+  last_seen: string;
+}
+
+export interface AdminLineState {
+  configured: boolean;
+  account: { name: string | null; quota: number | null; used: number | null; error?: string } | null;
+  webhook: { endpoint: string | null; active: boolean } | null;
+  users: LineUser[];
+  recent: { sent_at: string; kind: string; areas: string; message: string; ok: number; error: string | null; recipients: number | null }[];
+}

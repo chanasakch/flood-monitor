@@ -850,3 +850,54 @@ thead th:first-child {
 .map-search ~ .map-hint {
   top: 74px;
 }
+
+/* ---------- Admin ---------- */
+
+.admin-login {
+  max-width: 440px;
+  margin: 0 auto;
+}
+.admin-login h2 {
+  margin-bottom: 4px;
+}
+.admin-login .muted {
+  margin-bottom: 14px;
+}
+.textarea {
+  min-height: 200px;
+  padding: 12px 14px;
+  line-height: 1.55;
+  resize: vertical;
+}
+.admin-text {
+  margin-top: 14px;
+}
+.radio-row,
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap);
+  cursor: pointer;
+}
+.radio-row input,
+.check-row input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+.user-list {
+  margin: 4px 0 0 34px;
+}
+.admin-cost {
+  margin: 4px 0 10px;
+  font-weight: 600;
+}
+.admin-note {
+  margin-top: 12px;
+}
+.admin-link {
+  text-align: center;
+  padding: 8px 0;
+}

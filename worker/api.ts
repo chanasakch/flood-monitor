@@ -11,6 +11,7 @@ import type {
 } from '../shared/types';
 import { refreshOnVisit } from './cron';
 import { cacheGet, cachePut, getAllStatuses, getSnapshot, getStatus } from './db';
+import { handleAdmin, lineWebhook } from './admin';
 import { alertsStatus } from './alerts';
 import type { Env } from './env';
 import { getForecast } from './forecast';
@@ -235,10 +236,12 @@ async function sources(env: Env): Promise<Response> {
 // ---------- router ----------
 
 export async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  if (request.method !== 'GET' && request.method !== 'HEAD') return error(405, 'method_not_allowed');
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '');
   try {
+    if (path === '/api/line/webhook' && request.method === 'POST') return await lineWebhook(request, env, ctx);
+    if (path.startsWith('/api/admin/')) return await handleAdmin(request, env, path);
+    if (request.method !== 'GET' && request.method !== 'HEAD') return error(405, 'method_not_allowed');
     if (path === '/api/health') return json({ ok: true });
     if (path === '/api/sources') return await sources(env);
     if (path === '/api/forecast') return await forecast(env, url);
