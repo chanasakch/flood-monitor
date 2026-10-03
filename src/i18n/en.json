@@ -350,7 +350,7 @@
   },
   "alerts": {
     "title": "LINE rain alerts",
-    "intro": "When the forecast shows a high chance of rain, heavy rain or a thunderstorm within 2 hours, one message covering every area is sent to everyone who has added the family's LINE account.",
+    "intro": "At 08:00 and 18:00 a 12-hour rain outlook for every area is sent, only on days when some area expects rain. In between, an urgent alert goes out when rain or a storm within 2 hours appears that the last summary did not mention. Messages go to everyone who has added the family's LINE account.",
     "notConfigured": "Not set up yet",
     "ok": "Ready",
     "error": "Setup problem",
@@ -408,6 +408,7 @@
     "kind_manual": "Manual",
     "recipientsN": "{n} messages",
     "okShort": "Sent",
-    "link": "For the admin: send LINE messages"
+    "link": "For the admin: send LINE messages",
+    "kind_summary": "08:00/18:00 summary"
   }
 }

@@ -1,14 +1,21 @@
 import {
   ALERT_AREAS,
   ALERT_LIMITS,
+  alreadyAnnounced,
   composeAlert,
   composeQuotaNotice,
+  composeSummary,
+  currentSlot,
   decide,
+  encodeCoverage,
   evaluateArea,
   monthlySendCap,
+  outlookArea,
   type AreaAlert,
+  type AreaOutlook,
   type SentRow,
 } from '../shared/alerts';
+import type { ForecastResponse } from '../shared/types';
 import type { AlertsStatus } from '../shared/types';
 import { cacheGet, cachePut } from './db';
 import type { Env } from './env';
@@ -68,7 +75,22 @@ async function manualMessagesThisMonth(env: Env): Promise<number> {
   return row?.n ?? 0;
 }
 
-async function logSend(env: Env, kind: 'alert' | 'quota', areas: string[], message: string, ok: boolean, error: string | null): Promise<void> {
+/** Coverage strings of summaries sent in the last 12 hours. */
+async function recentCoverage(env: Env): Promise<string[]> {
+  const since = new Date(Date.now() - 12 * 3600000).toISOString();
+  const { results } = await env.DB.prepare("SELECT areas FROM alert_log WHERE kind = 'summary' AND ok = 1 AND sent_at >= ?").bind(since).all<{ areas: string }>();
+  return results.map((r) => r.areas);
+}
+
+/** Whether this slot's summary has already been attempted today (sent, or failed: no retry storm). */
+async function slotDone(env: Env, slot: number, now: number): Promise<boolean> {
+  const day = new Date(now + 7 * 3600000).toISOString().slice(0, 10);
+  const slotStart = new Date(Date.parse(`${day}T${String(slot).padStart(2, '0')}:00:00+07:00`)).toISOString();
+  const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM alert_log WHERE kind = 'summary' AND sent_at >= ?").bind(slotStart).first<{ n: number }>();
+  return (row?.n ?? 0) > 0;
+}
+
+async function logSend(env: Env, kind: 'alert' | 'summary' | 'quota', areas: string[], message: string, ok: boolean, error: string | null): Promise<void> {
   await env.DB.prepare('INSERT INTO alert_log (sent_at, kind, areas, message, ok, error, recipients) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .bind(new Date().toISOString(), kind, areas.join(','), message, ok ? 1 : 0, error, Number(env.ALERT_RECIPIENTS) || ALERT_LIMITS.recipients)
     .run();
@@ -101,25 +123,50 @@ export async function runAlerts(env: Env): Promise<void> {
     return;
   }
 
-  const hits: AreaAlert[] = [];
-  const sources = new Set<string>();
+  const forecasts = new Map<string, ForecastResponse>();
   for (const area of ALERT_AREAS) {
     try {
-      const { res } = await getForecast(env, area.lat, area.lng);
-      const hit = evaluateArea(area, res, now);
-      if (hit) {
-        hits.push(hit);
-        if (res.tmd.ok) sources.add('กรมอุตุนิยมวิทยา');
-        if (res.openmeteo.ok) sources.add('Open-Meteo');
-      }
+      forecasts.set(area.id, (await getForecast(env, area.lat, area.lng)).res);
     } catch (e) {
       console.error(`[alerts] forecast for ${area.id} failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
-  if (!hits.length) return;
+  const sourcesOf = (ids: string[]) => {
+    const out = new Set<string>();
+    for (const id of ids) {
+      const fc = forecasts.get(id);
+      if (fc?.tmd.ok) out.add('กรมอุตุนิยมวิทยา');
+      if (fc?.openmeteo.ok) out.add('Open-Meteo');
+    }
+    return [...out];
+  };
 
-  const text = composeAlert(hits, now, siteUrl, decision.sendNo, cap, [...sources]);
-  const ids = hits.map((h) => h.area.id);
+  let text: string;
+  let kind: 'alert' | 'summary';
+  let ids: string[];
+  const slot = currentSlot(now);
+  if (slot != null && !(await slotDone(env, slot, now))) {
+    // 08:00 / 18:00: a 12-hour outlook for every area, sent only when at least one expects rain.
+    const outlooks: AreaOutlook[] = ALERT_AREAS.filter((a) => forecasts.has(a.id)).map((a) => outlookArea(a, forecasts.get(a.id)!, now));
+    const wet = outlooks.filter((o) => o.kind);
+    if (!wet.length) return;
+    text = composeSummary(outlooks, now, siteUrl, decision.sendNo, cap, sourcesOf(wet.map((o) => o.area.id)));
+    kind = 'summary';
+    ids = [encodeCoverage(outlooks)];
+  } else {
+    // Between summaries: only rain the last summary did not already announce.
+    const coverage = await recentCoverage(env);
+    const hits: AreaAlert[] = [];
+    for (const area of ALERT_AREAS) {
+      const fc = forecasts.get(area.id);
+      const hit = fc ? evaluateArea(area, fc, now) : null;
+      if (hit && !alreadyAnnounced(hit, coverage)) hits.push(hit);
+    }
+    if (!hits.length) return;
+    ids = hits.map((h) => h.area.id);
+    text = composeAlert(hits, now, siteUrl, decision.sendNo, cap, sourcesOf(ids));
+    kind = 'alert';
+  }
   if (!token) return console.log(`[alerts] (no LINE token) would send: ${text}`);
 
   // Do not start a send that LINE's own counter says would go over the plan.
@@ -130,12 +177,12 @@ export async function runAlerts(env: Env): Promise<void> {
   }
   try {
     await broadcast(token, text);
-    await logSend(env, 'alert', ids, text, true, null);
+    await logSend(env, kind, ids, text, true, null);
     await checkAccount(env, token, true);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error(`[alerts] LINE send failed: ${message}`);
-    await logSend(env, 'alert', ids, text, false, message);
+    await logSend(env, kind, ids, text, false, message);
   }
 }
 
@@ -156,7 +203,7 @@ export async function alertsStatus(env: Env): Promise<AlertsStatus> {
     checked_at: account?.checked_at ?? null,
     quota: account?.quota ?? null,
     used: account?.used ?? null,
-    sent_this_month: rows.filter((r) => r.kind === 'alert' && r.ok === 1).length,
+    sent_this_month: rows.filter((r) => (r.kind === 'alert' || r.kind === 'summary') && r.ok === 1).length,
     cap,
     max_per_day: ALERT_LIMITS.maxPerDay,
     min_gap_hours: ALERT_LIMITS.minGapHours,

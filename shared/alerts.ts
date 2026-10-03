@@ -63,10 +63,10 @@ export interface AreaAlert {
   mm: number | null;
 }
 
-function inWindow(h: ForecastHour, now: number): boolean {
+function inWindow(h: ForecastHour, now: number, hours: number = LOOKAHEAD_HOURS): boolean {
   const t = Date.parse(h.time);
   const hourStart = Math.floor(now / 3600000) * 3600000;
-  return t >= hourStart && t <= now + LOOKAHEAD_HOURS * 3600000;
+  return t >= hourStart && t <= now + hours * 3600000;
 }
 
 /**
@@ -101,6 +101,75 @@ export function evaluateArea(area: AlertArea, fc: ForecastResponse, now: number)
   return { area, kind: b.kind, atMs: b.atMs, prob: max(om.map((h) => h.prob)), mm: max([...tmd, ...om].map((h) => h.mm)) };
 }
 
+// ---- Twice-daily summary (08:00 and 18:00, only when rain is expected) ----
+
+/** Thai-time hours at which a summary may be sent; each slot stays open for `SLOT_SPAN_HOURS`. */
+export const SUMMARY_HOURS = [8, 18] as const;
+/** The slot stays open this long, so a summary blocked by the 3-hour gap can still go out a bit later. */
+export const SLOT_SPAN_HOURS = 2;
+export const SUMMARY_WINDOW_HOURS = 12;
+
+/** The summary slot open right now (8 or 18), or null. */
+export function currentSlot(now: number): number | null {
+  const h = new Date(now + 7 * 3600000).getUTCHours();
+  return SUMMARY_HOURS.find((s) => h >= s && h < s + SLOT_SPAN_HOURS) ?? null;
+}
+
+export interface AreaOutlook {
+  area: AlertArea;
+  /** Strongest condition in the window, or null when rain is not likely. */
+  kind: AlertKind | null;
+  /** First and last wet hour (start of hour, ms), when `kind` is set. */
+  fromMs: number | null;
+  toMs: number | null;
+  maxProb: number | null;
+}
+
+/** Same conditions as the urgent alert, over the next 12 hours, keeping the span of wet hours. */
+export function outlookArea(area: AlertArea, fc: ForecastResponse, now: number, hours: number = SUMMARY_WINDOW_HOURS): AreaOutlook {
+  const fresh = (fetchedAt: string | null) => !!fetchedAt && now - Date.parse(fetchedAt) < 3 * 3600000;
+  const tmd = fc.tmd.ok && fresh(fc.tmd.fetched_at) ? fc.tmd.hours.filter((h) => inWindow(h, now, hours)) : [];
+  const om = fc.openmeteo.ok && fresh(fc.openmeteo.fetched_at) ? fc.openmeteo.hours.filter((h) => inWindow(h, now, hours)) : [];
+  const wet = new Map<number, AlertKind>();
+  const mark = (time: string, kind: AlertKind) => {
+    const t = Date.parse(time);
+    const prev = wet.get(t);
+    if (!prev || STRENGTH[kind] > STRENGTH[prev]) wet.set(t, kind);
+  };
+  for (const h of tmd) {
+    if (h.cond === COND_THUNDERSTORM) mark(h.time, 'storm');
+    else if (h.cond === COND_HEAVY_RAIN || (h.mm ?? 0) >= HEAVY_MM) mark(h.time, 'heavy');
+  }
+  for (const h of om) {
+    if ((h.mm ?? 0) >= HEAVY_MM) mark(h.time, 'heavy');
+    else if ((h.prob ?? 0) >= PROB_THRESHOLD) mark(h.time, 'rain');
+  }
+  const probs = om.map((h) => h.prob).filter((p): p is number => typeof p === 'number');
+  const maxProb = probs.length ? Math.max(...probs) : null;
+  if (!wet.size) return { area, kind: null, fromMs: null, toMs: null, maxProb };
+  const times = [...wet.keys()].sort((a, b) => a - b);
+  const kind = [...wet.values()].reduce((a, b) => (STRENGTH[b] > STRENGTH[a] ? b : a));
+  return { area, kind, fromMs: times[0], toMs: times[times.length - 1], maxProb };
+}
+
+/** Area ids and wet spans a summary covered, stored with the send: "minburi@<from>-<to>". */
+export function encodeCoverage(outlooks: AreaOutlook[]): string {
+  return outlooks
+    .filter((o) => o.kind && o.fromMs != null && o.toMs != null)
+    .map((o) => `${o.area.id}@${o.fromMs}-${o.toMs}`)
+    .join(',');
+}
+
+/** True when a recent summary already announced rain for this area at this hour: no need to alert again. */
+export function alreadyAnnounced(alert: AreaAlert, coverage: string[]): boolean {
+  return coverage.some((c) =>
+    c.split(',').some((entry) => {
+      const m = /^([a-z]+)@(\d+)-(\d+)$/.exec(entry);
+      return !!m && m[1] === alert.area.id && alert.atMs >= Number(m[2]) && alert.atMs <= Number(m[3]);
+    }),
+  );
+}
+
 // ---- Message ----
 
 const hhmm = (ms: number) => new Date(ms + 7 * 3600000).toISOString().slice(11, 16);
@@ -131,6 +200,28 @@ export function composeAlert(alerts: AreaAlert[], now: number, siteUrl: string, 
   ].join('\n');
 }
 
+export function composeSummary(outlooks: AreaOutlook[], now: number, siteUrl: string, sendNo: number, cap: number, sources: string[]): string {
+  const sorted = [...outlooks].sort(
+    (x, y) => (y.kind ? STRENGTH[y.kind] : 0) - (x.kind ? STRENGTH[x.kind] : 0) || (x.fromMs ?? Infinity) - (y.fromMs ?? Infinity),
+  );
+  const line = (o: AreaOutlook) => {
+    if (!o.kind || o.fromMs == null || o.toMs == null) return `• ${o.area.name}: โอกาสฝนต่ำ`;
+    const span = o.fromMs === o.toMs ? `ช่วง ${hhmm(o.fromMs)} น.` : `ช่วง ${hhmm(o.fromMs)}–${hhmm(o.toMs + 3600000)} น.`;
+    const what = o.kind === 'storm' ? 'เสี่ยงพายุฝนฟ้าคะนอง' : o.kind === 'heavy' ? 'ฝนหนัก' : 'โอกาสฝนสูง';
+    return `• ${o.area.name}: ${what} ${span}${o.maxProb != null ? ` (สูงสุด ${o.maxProb}%)` : ''}`;
+  };
+  const icon = sorted.some((o) => o.kind && o.kind !== 'rain') ? '⛈️' : '🌦️';
+  return [
+    `${icon} พยากรณ์ฝน 12 ชม. ข้างหน้า · ${hhmm(now)} น.`,
+    ...sorted.map(line),
+    '',
+    `ที่มา: ${sources.join(', ')} (เป็นพยากรณ์ อาจคลาดเคลื่อน)`,
+    `ดูรายละเอียด: ${siteUrl}`,
+    `แจ้งเตือนครั้งที่ ${sendNo}/${cap} ของเดือนนี้`,
+    'ใช้ประกอบการตัดสินใจเท่านั้น โปรดตรวจสอบประกาศทางการอีกครั้ง',
+  ].join('\n');
+}
+
 export function composeQuotaNotice(cap: number, siteUrl: string): string {
   return [
     `🔕 แจ้งเตือนฝนของเดือนนี้ครบ ${cap} ครั้งแล้ว`,
@@ -143,21 +234,24 @@ export function composeQuotaNotice(cap: number, siteUrl: string): string {
 
 export interface SentRow {
   sent_at: string;
-  kind: 'alert' | 'quota';
+  kind: 'alert' | 'summary' | 'quota';
   ok: number;
 }
+
+/** Automatic sends that count towards the daily and monthly limits. */
+const counts = (r: SentRow) => r.kind === 'alert' || r.kind === 'summary';
 
 export type Decision = { send: 'alert'; sendNo: number } | { send: 'quota' } | { send: false; reason: string };
 
 /** Month and day boundaries follow Thai time. */
 const bkk = (ms: number) => new Date(ms + 7 * 3600000).toISOString();
 
-/** Apply the limits: 2 a day, 3 hours apart, `cap` a month, then one "limit reached" notice. */
+/** Apply the limits to alerts and summaries together: 2 a day, 3 hours apart, `cap` a month, then one "limit reached" notice. */
 export function decide(rows: SentRow[], now: number, cap: number): Decision {
   const month = bkk(now).slice(0, 7);
   const day = bkk(now).slice(0, 10);
   const ok = rows.filter((r) => r.ok === 1);
-  const monthAlerts = ok.filter((r) => r.kind === 'alert' && bkk(Date.parse(r.sent_at)).startsWith(month));
+  const monthAlerts = ok.filter((r) => counts(r) && bkk(Date.parse(r.sent_at)).startsWith(month));
   if (monthAlerts.length >= cap) {
     return ok.some((r) => r.kind === 'quota' && bkk(Date.parse(r.sent_at)).startsWith(month))
       ? { send: false, reason: 'monthly limit reached' }

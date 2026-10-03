@@ -94,3 +94,62 @@ describe('sending limits', () => {
     expect(decide(rows, Date.parse('2026-11-01T08:00:00+07:00'), 48)).toEqual({ send: 'alert', sendNo: 1 });
   });
 });
+
+import { alreadyAnnounced, composeSummary, currentSlot, encodeCoverage, outlookArea } from '../shared/alerts';
+
+describe('twice-daily summary', () => {
+  const at = (hhmm: string) => Date.parse(`2026-10-04T${hhmm}:00+07:00`);
+  const fcAt = (now: number, tmd: ForecastHour[], om: ForecastHour[]) => ({ ...fc(tmd, om), tmd: { ...fc(tmd, om).tmd, fetched_at: new Date(now - 60000).toISOString() }, openmeteo: { ...fc(tmd, om).openmeteo, fetched_at: new Date(now - 60000).toISOString() } });
+
+  it('opens at 08:00 and 18:00 Thai time for two hours', () => {
+    expect(currentSlot(at('07:59'))).toBeNull();
+    expect(currentSlot(at('08:00'))).toBe(8);
+    expect(currentSlot(at('09:50'))).toBe(8);
+    expect(currentSlot(at('10:00'))).toBeNull();
+    expect(currentSlot(at('18:05'))).toBe(18);
+  });
+
+  it('finds the span of wet hours in the next 12 hours', () => {
+    const now = at('08:00');
+    const o = outlookArea(area, fcAt(now, [{ time: iso(16), mm: 2, cond: 8 }], [{ time: iso(14), mm: 1, prob: 70 }, { time: iso(15), mm: 1, prob: 85 }, { time: iso(21), mm: 9, prob: 90 }]), now);
+    expect(o.kind).toBe('storm');
+    expect(o.fromMs).toBe(Date.parse(iso(14)));
+    expect(o.toMs).toBe(Date.parse(iso(16))); // 21:00 is past the 12-hour window (08:00 to 20:00)
+    expect(o.maxProb).toBe(85);
+  });
+
+  it('reports a dry area as low chance and lists every area', () => {
+    const now = at('08:00');
+    const wet = outlookArea(ALERT_AREAS[0], fcAt(now, [], [{ time: iso(14), mm: 1, prob: 70 }, { time: iso(15), mm: 1, prob: 75 }]), now);
+    const dry = outlookArea(ALERT_AREAS[5], fcAt(now, [], [{ time: iso(14), mm: 0, prob: 10 }]), now);
+    expect(dry.kind).toBeNull();
+    const text = composeSummary([dry, wet], now, 'https://example.test', 1, 48, ['Open-Meteo']);
+    const lines = text.split('\n');
+    expect(lines[0]).toBe('🌦️ พยากรณ์ฝน 12 ชม. ข้างหน้า · 08:00 น.');
+    expect(lines[1]).toBe('• มีนบุรี: โอกาสฝนสูง ช่วง 14:00–16:00 น. (สูงสุด 75%)');
+    expect(lines[2]).toBe('• ลับแล อุตรดิตถ์: โอกาสฝนต่ำ');
+  });
+
+  it('skips an urgent alert that the last summary already announced', () => {
+    const now = at('08:00');
+    const wet = outlookArea(ALERT_AREAS[0], fcAt(now, [], [{ time: iso(14), mm: 1, prob: 70 }, { time: iso(15), mm: 1, prob: 75 }]), now);
+    const coverage = [encodeCoverage([wet])];
+    expect(coverage[0]).toBe(`minburi@${Date.parse(iso(14))}-${Date.parse(iso(15))}`);
+    const later = at('13:30');
+    const covered = evaluateArea(ALERT_AREAS[0], fcAt(later, [], [{ time: iso(14), mm: 1, prob: 80 }]), later)!;
+    const fresh = evaluateArea(ALERT_AREAS[3], fcAt(later, [], [{ time: iso(14), mm: 1, prob: 80 }]), later)!;
+    const outside = evaluateArea(ALERT_AREAS[0], fcAt(at('16:10'), [], [{ time: iso(17), mm: 1, prob: 80 }]), at('16:10'))!;
+    expect(alreadyAnnounced(covered, coverage)).toBe(true);
+    expect(alreadyAnnounced(fresh, coverage)).toBe(false);
+    expect(alreadyAnnounced(outside, coverage)).toBe(false);
+  });
+
+  it('counts summaries and alerts together against the limits', () => {
+    const rows = [
+      { sent_at: new Date(at('08:00')).toISOString(), kind: 'summary' as const, ok: 1 },
+      { sent_at: new Date(at('13:00')).toISOString(), kind: 'alert' as const, ok: 1 },
+    ];
+    expect(decide(rows, at('18:00'), 48)).toEqual({ send: false, reason: 'daily limit reached' });
+    expect(decide(rows.slice(0, 1), at('18:00'), 48)).toEqual({ send: 'alert', sendNo: 2 });
+  });
+});
