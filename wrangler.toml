@@ -29,9 +29,13 @@ crons = [
 mode = "targeted"
 region = "aws:ap-southeast-7"
 
+[vars]
+SITE_URL = "https://flood-monitor.flood-monitor.workers.dev"
+ALERT_RECIPIENTS = "6"
+
 [observability]
 enabled = true
 
-# Secret (never in this file): TMD_API_TOKEN
-#   production: npx wrangler secret put TMD_API_TOKEN
+# Secrets (never in this file): TMD_API_TOKEN, LINE_CHANNEL_ACCESS_TOKEN
+#   production: npx wrangler secret put TMD_API_TOKEN   (same for LINE_CHANNEL_ACCESS_TOKEN)
 #   local dev:  .dev.vars  ->  TMD_API_TOKEN=...

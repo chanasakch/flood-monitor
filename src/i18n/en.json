@@ -330,7 +330,8 @@
     "staleWhy": "Rain and water level stations use 3 hours because several agencies report hourly and publish 1.5 to 2.5 hours after the observation.",
     "limit5": "Rainfall and water level are fetched from ThaiWater directly by your browser, because ThaiWater does not accept requests from this site's server. ThaiWater therefore sees a connection from your device, as it would when you open thaiwater.net, and each reload (every 10 minutes) uses about 1 MB of data.",
     "searchCredit": "Subdistrict and district positions: Thai Meteorological Department · Place names: OpenStreetMap via Photon",
-    "limit6": "Place-name searches are sent through this site's server to the Photon service (OpenStreetMap data), so some places may be missing or spelled differently."
+    "limit6": "Place-name searches are sent through this site's server to the Photon service (OpenStreetMap data), so some places may be missing or spelled differently.",
+    "limit7": "LINE rain alerts use LINE's free plan (300 messages a month, counted per recipient), so they are limited to 2 a day and 48 a month, and rely on forecasts only: rain may come without an alert, or an alert without rain."
   },
   "search": {
     "label": "Search for a place",
@@ -346,5 +347,23 @@
     "results": "{n} results",
     "homeTitle": "Check another place",
     "homeHint": "Type a place name, then tap a result to see rain, water level and the forecast near it."
+  },
+  "alerts": {
+    "title": "LINE rain alerts",
+    "intro": "When the forecast shows a high chance of rain, heavy rain or a thunderstorm within 2 hours, one message covering every area is sent to everyone who has added the family's LINE account.",
+    "notConfigured": "Not set up yet",
+    "ok": "Ready",
+    "error": "Setup problem",
+    "account": "LINE account",
+    "sent": "Sent this month",
+    "sentValue": "{n} of {cap}",
+    "rules": "Rules",
+    "rulesValue": "At most {day} a day, at least {gap} hours apart",
+    "quota": "LINE quota this month",
+    "quotaValue": "{used} of {quota} messages used",
+    "last": "Last sent",
+    "lastFailed": "Sending failed",
+    "never": "Not sent yet",
+    "areas": "Areas watched"
   }
 }

@@ -1,6 +1,6 @@
-import { ExternalLink, RefreshCw } from 'lucide-preact';
+import { BellRing, ExternalLink, RefreshCw } from 'lucide-preact';
 import { SOURCE_IDS, SOURCES } from '../../shared/sources';
-import type { Level, SourceStatus } from '../../shared/types';
+import type { AlertsStatus, Level, SourceStatus } from '../../shared/types';
 import { ExtLink } from '../components/Link';
 import { CardSkeleton, ErrorState } from '../components/States';
 import { Chip, sourceName } from '../components/Status';
@@ -19,6 +19,69 @@ function health(s: SourceStatus): { level: Level; label: string } {
 function threshold(min: number | null): string {
   if (min == null) return t('sources.thresholdNone');
   return min >= 120 ? t('sources.thresholdHour', { n: min / 60 }) : t('sources.thresholdMin', { n: min });
+}
+
+function AlertsCard({ a, now }: { a: AlertsStatus; now: number }) {
+  const state: { level: Level; label: string } = !a.configured
+    ? { level: 'unknown', label: t('alerts.notConfigured') }
+    : a.account_ok === false
+      ? { level: 'danger', label: t('alerts.error') }
+      : { level: 'normal', label: t('alerts.ok') };
+  const ago = formatAgo(a.last_sent_at, now);
+  return (
+    <section class="card errors-card" aria-labelledby="alerts-title">
+      <div class="card-head">
+        <h2 id="alerts-title" class="card-title">
+          <BellRing size={20} aria-hidden="true" />
+          {t('alerts.title')}
+        </h2>
+        <Chip level={state.level} label={state.label} />
+      </div>
+      <p class="muted small">{t('alerts.intro')}</p>
+      <dl class="facts">
+        {a.account_name && (
+          <div>
+            <dt>{t('alerts.account')}</dt>
+            <dd>{a.account_name}</dd>
+          </div>
+        )}
+        <div>
+          <dt>{t('alerts.sent')}</dt>
+          <dd class="num">{t('alerts.sentValue', { n: a.sent_this_month, cap: a.cap })}</dd>
+        </div>
+        <div>
+          <dt>{t('alerts.rules')}</dt>
+          <dd>{t('alerts.rulesValue', { day: a.max_per_day, gap: a.min_gap_hours })}</dd>
+        </div>
+        {a.quota != null && a.used != null && (
+          <div>
+            <dt>{t('alerts.quota')}</dt>
+            <dd class="num">{t('alerts.quotaValue', { used: a.used, quota: a.quota })}</dd>
+          </div>
+        )}
+        <div>
+          <dt>{t('alerts.last')}</dt>
+          <dd class="num">
+            {a.last_sent_at ? formatDateTime(a.last_sent_at) : t('alerts.never')}
+            {ago && <span class="muted"> ({ago})</span>}
+            {a.last_ok === false && <code>{`${t('alerts.lastFailed')}: ${a.last_error ?? ''}`}</code>}
+          </dd>
+        </div>
+        {a.account_ok === false && a.account_error && (
+          <div class="fact-error">
+            <dt>{t('alerts.error')}</dt>
+            <dd>
+              <code>{a.account_error}</code>
+            </dd>
+          </div>
+        )}
+        <div>
+          <dt>{t('alerts.areas')}</dt>
+          <dd>{a.areas.join(' · ')}</dd>
+        </div>
+      </dl>
+    </section>
+  );
 }
 
 export function SourcesPage() {
@@ -117,6 +180,8 @@ export function SourcesPage() {
               );
             })}
           </div>
+
+          {data.data.alerts && <AlertsCard a={data.data.alerts} now={now} />}
 
           <section class="card errors-card" aria-labelledby="err-title">
             <h2 id="err-title">{t('sources.recentErrors')}</h2>

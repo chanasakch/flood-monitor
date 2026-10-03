@@ -123,8 +123,29 @@ export interface HistoryResponse {
   thresholds?: { bank: number | null; ground: number | null };
 }
 
+export interface AlertsStatus {
+  /** A LINE token is set. */
+  configured: boolean;
+  /** Last token check: true ok, false failed, null never checked. */
+  account_ok: boolean | null;
+  account_name: string | null;
+  account_error: string | null;
+  checked_at: string | null;
+  quota: number | null;
+  used: number | null;
+  sent_this_month: number;
+  cap: number;
+  max_per_day: number;
+  min_gap_hours: number;
+  last_sent_at: string | null;
+  last_ok: boolean | null;
+  last_error: string | null;
+  areas: string[];
+}
+
 export interface SourcesResponse {
   now: string;
+  alerts?: AlertsStatus;
   sources: SourceStatus[];
   recent_errors: { source: SourceId; at: string; ok: boolean; message: string | null }[];
 }

@@ -201,6 +201,16 @@ The search box only moves the map or opens a point; it never supplies readings.
   may throttle; when it fails the built-in list still works and the box says so. Typical
   response time 3-4 s. Fixture: `photon-search.json`.
 
+## LINE Messaging API (alerts, not a data source)
+
+- Endpoint: `POST https://api.line.me/v2/bot/message/broadcast` (to every friend of the account),
+  plus free read-only calls `GET /v2/bot/info`, `/v2/bot/message/quota`,
+  `/v2/bot/message/quota/consumption` to check the token and usage every 6 hours.
+- Auth: channel access token, secret `LINE_CHANNEL_ACCESS_TOKEN`.
+- Free plan (Thailand): 300 messages a month, counted per recipient
+  (https://developers.line.biz/en/docs/messaging-api/pricing/). With 6 people: 48 sends a month.
+- Alerts are computed from the TMD and Open-Meteo forecasts only (`shared/alerts.ts`).
+
 ## Map and other third-party resources
 
 - Base map: OpenFreeMap styles `https://tiles.openfreemap.org/styles/{positron,dark,liberty}`

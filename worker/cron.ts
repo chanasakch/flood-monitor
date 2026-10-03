@@ -1,5 +1,6 @@
 import { LAYER_SOURCE } from '../shared/sources';
 import type { LayerType, Reading, SourceId } from '../shared/types';
+import { runAlerts } from './alerts';
 import { getSnapshot, getStatus, prune, putSnapshot, recordFailure, recordSuccess } from './db';
 import type { Env } from './env';
 import { fetchCctv } from './fetchers/bma-cctv';
@@ -207,9 +208,14 @@ export async function runCron(env: Env, cron: string, scheduledTime: number): Pr
       // Local development only (`?cron=manual`): run every job once, from this machine.
       return runJobs(env, ['rain', 'water', 'road', 'radar', 'highway', 'cctv']);
     case CRON_SENSORS:
+      await runJobs(env, await reachable(['radar', 'road']));
+      // LINE rain alerts: checked every 10 minutes, sent within the agreed limits.
+      await runAlerts(env).catch((e) => console.error(`[alerts] ${e instanceof Error ? e.message : String(e)}`));
+      return;
     default:
       // Any other schedule, including one this code does not know, gets the safe set:
-      // Thailand-only sources are still skipped when the run is abroad.
+      // Thailand-only sources are still skipped when the run is abroad. No alerts here, so a
+      // stray trigger cannot cause extra messages.
       return runJobs(env, await reachable(['radar', 'road']));
   }
 }

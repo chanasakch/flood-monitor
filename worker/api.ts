@@ -1,7 +1,5 @@
 import { LAYER_SOURCE, LAYER_TYPES, RADAR_BOUNDS, SOURCE_IDS, SOURCES, THAILAND_BBOX } from '../shared/sources';
 import type {
-  ForecastPart,
-  ForecastResponse,
   HistoryPoint,
   HistoryResponse,
   LayerType,
@@ -12,18 +10,16 @@ import type {
   SourceStatus,
 } from '../shared/types';
 import { refreshOnVisit } from './cron';
-import { cacheGet, cachePut, getAllStatuses, getSnapshot, getStatus, recordFailure, recordSuccess } from './db';
+import { cacheGet, cachePut, getAllStatuses, getSnapshot, getStatus } from './db';
+import { alertsStatus } from './alerts';
 import type { Env } from './env';
-import { fetchOpenMeteo } from './fetchers/open-meteo';
+import { getForecast } from './forecast';
 import { fetchPhoton } from './fetchers/photon';
 import { fetchRainGraph } from './fetchers/thaiwater-rain';
 import { fetchWaterGraph } from './fetchers/thaiwater-water';
-import { fetchTmdHourly } from './fetchers/tmd-nwp';
 import { bkkDate, toBkkIso } from './lib/time';
 
-const FORECAST_TTL_S = 30 * 60;
 const HISTORY_TTL_S = 30 * 60;
-const RETRY_AFTER_FAILURE_S = 3 * 60;
 
 const BASE_HEADERS = { 'x-content-type-options': 'nosniff' };
 
@@ -102,26 +98,6 @@ async function radarFrame(env: Env): Promise<Response> {
 
 // ---------- /api/forecast ----------
 
-async function fetchPart(
-  env: Env,
-  source: 'tmd-nwp' | 'open-meteo',
-  job: () => Promise<ForecastPart['hours']>,
-): Promise<ForecastPart> {
-  const started = Date.now();
-  const at = new Date(started).toISOString();
-  const base = { source, source_url: SOURCES[source].url };
-  try {
-    const hours = await job();
-    await recordSuccess(env.DB, source, at, hours.length, Date.now() - started);
-    return { ...base, ok: true, fetched_at: at, hours };
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error(`[${source}] forecast failed: ${message}`);
-    await recordFailure(env.DB, source, at, message, Date.now() - started).catch(() => {});
-    return { ...base, ok: false, fetched_at: null, error: message, hours: [] };
-  }
-}
-
 async function forecast(env: Env, url: URL): Promise<Response> {
   const lat = Number(url.searchParams.get('lat'));
   const lng = Number(url.searchParams.get('lng'));
@@ -130,60 +106,8 @@ async function forecast(env: Env, url: URL): Promise<Response> {
   }
   const b = THAILAND_BBOX;
   if (lat < b.south || lat > b.north || lng < b.west || lng > b.east) return error(400, 'outside_thailand');
-
-  // ~1 km grid: nearby taps share one upstream call.
-  const rLat = Math.round(lat * 100) / 100;
-  const rLng = Math.round(lng * 100) / 100;
-  const key = `fc:${rLat.toFixed(2)},${rLng.toFixed(2)}`;
-  const nowS = Math.floor(Date.now() / 1000);
-
-  const cached = await cacheGet(env.DB, key);
-  if (cached && cached.expires_at > nowS) return json(cached.body, { maxAge: 300 });
-
-  let previous: ForecastResponse | null = null;
-  if (cached) {
-    try {
-      previous = JSON.parse(cached.body) as ForecastResponse;
-    } catch {
-      previous = null;
-    }
-  }
-
-  const token = env.TMD_API_TOKEN?.trim();
-  const [tmdNew, omNew] = await Promise.all([
-    token
-      ? fetchPart(env, 'tmd-nwp', () => fetchTmdHourly(rLat, rLng, token))
-      : Promise.resolve<ForecastPart>({
-          ok: false,
-          source: 'tmd-nwp',
-          source_url: SOURCES['tmd-nwp'].url,
-          fetched_at: null,
-          error: 'TMD_API_TOKEN is not configured',
-          hours: [],
-        }),
-    fetchPart(env, 'open-meteo', () => fetchOpenMeteo(rLat, rLng)),
-  ]);
-
-  // A failed part falls back to its last good answer. It keeps its old `fetched_at`,
-  // so the UI greys it out once it is older than the forecast threshold. Values are never invented.
-  const keep = (fresh: ForecastPart, old: ForecastPart | undefined): ForecastPart =>
-    !fresh.ok && old?.ok ? { ...old, error: fresh.error } : fresh;
-  const tmd = keep(tmdNew, previous?.tmd);
-  const openmeteo = keep(omNew, previous?.openmeteo);
-
-  const res: ForecastResponse = {
-    lat: rLat,
-    lng: rLng,
-    primary: tmd.ok ? 'tmd-nwp' : openmeteo.ok ? 'open-meteo' : null,
-    tmd,
-    openmeteo,
-  };
-  const body = JSON.stringify(res);
-  const allFresh = (tmdNew.ok || !token) && omNew.ok;
-  if (tmd.ok || openmeteo.ok) {
-    await cachePut(env.DB, key, new Date().toISOString(), allFresh ? FORECAST_TTL_S : RETRY_AFTER_FAILURE_S, body);
-  }
-  return json(body, { maxAge: allFresh ? 300 : 0 });
+  const { body, fresh } = await getForecast(env, lat, lng);
+  return json(body, { maxAge: fresh ? 300 : 0 });
 }
 
 // ---------- /api/history/:id ----------
@@ -301,6 +225,7 @@ async function sources(env: Env): Promise<Response> {
   const byId = new Map(statuses.map((s) => [s.source, s]));
   const res: SourcesResponse = {
     now: new Date().toISOString(),
+    alerts: await alertsStatus(env).catch(() => undefined),
     sources: SOURCE_IDS.map((id) => byId.get(id) ?? emptyStatus(id)),
     recent_errors: log.results.map((r) => ({ source: r.source, at: r.at, ok: r.ok === 1, message: r.message })),
   };
