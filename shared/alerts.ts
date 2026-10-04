@@ -16,10 +16,9 @@ export const ALERT_AREAS: AlertArea[] = [
   { id: 'ramintra', name: 'รามอินทรา', lat: 13.8488, lng: 100.6438 }, // ถนนรามอินทรา ช่วงกลาง
   { id: 'kaset', name: 'เกษตร–รัชโยธิน', lat: 13.8334, lng: 100.5719 }, // ระหว่างแยกเกษตรกับแยกรัชโยธิน
   { id: 'laplae', name: 'ลับแล อุตรดิตถ์', lat: 17.6513, lng: 100.0391 }, // ที่ว่าการอำเภอลับแล
-  // Rayong: points are the subdistricts that hold the district seat, from the TMD subdistrict file
-  // (public/gazetteer.json). Map Ta Phut is a subdistrict of Mueang Rayong, not a district.
+  // Rayong districts: each point is the subdistrict that holds the district seat, from the TMD
+  // subdistrict file (public/gazetteer.json).
   { id: 'nikhomphatthana', name: 'นิคมพัฒนา ระยอง', lat: 12.8435, lng: 101.1811 }, // ต.นิคมพัฒนา อ.นิคมพัฒนา
-  { id: 'maptaphut', name: 'มาบตาพุด ระยอง', lat: 12.7165, lng: 101.1502 }, // ต.มาบตาพุด อ.เมืองระยอง
   { id: 'mueangrayong', name: 'เมืองระยอง', lat: 12.6893, lng: 101.2687 }, // ต.ท่าประดู่ ตัวเมืองระยอง
   { id: 'pluakdaeng', name: 'ปลวกแดง ระยอง', lat: 12.9843, lng: 101.2118 }, // ต.ปลวกแดง อ.ปลวกแดง
 ];

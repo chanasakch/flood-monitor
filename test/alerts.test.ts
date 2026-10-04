@@ -170,6 +170,7 @@ describe('alert areas', () => {
   });
 
   it('places the Rayong points in the right districts of the built-in list', async () => {
+    expect(ALERT_AREAS.filter((a) => a.name.includes('ระยอง')).map((a) => a.id)).toEqual(['nikhomphatthana', 'mueangrayong', 'pluakdaeng']);
     const { readFileSync } = await import('node:fs');
     const g = JSON.parse(readFileSync(decodeURIComponent(new URL('../public/gazetteer.json', import.meta.url).pathname), 'utf8')) as {
       p: [string, string][];
@@ -182,7 +183,6 @@ describe('alert areas', () => {
     };
     const area = (id: string) => ALERT_AREAS.find((a) => a.id === id)!;
     expect(find('นิคมพัฒนา', 'นิคมพัฒนา')).toEqual({ lat: area('nikhomphatthana').lat, lng: area('nikhomphatthana').lng });
-    expect(find('มาบตาพุด', 'เมืองระยอง')).toEqual({ lat: area('maptaphut').lat, lng: area('maptaphut').lng });
     expect(find('ท่าประดู่', 'เมืองระยอง')).toEqual({ lat: area('mueangrayong').lat, lng: area('mueangrayong').lng });
     expect(find('ปลวกแดง', 'ปลวกแดง')).toEqual({ lat: area('pluakdaeng').lat, lng: area('pluakdaeng').lng });
   });
