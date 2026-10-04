@@ -277,7 +277,8 @@
     "attribution": "Base map",
     "items": "{n} points",
     "legendShape": "Shape and colour show the level",
-    "staleLegend": "Data not current, or no data"
+    "staleLegend": "Data not current, or no data",
+    "detail": "Detailed map (building and shop names)"
   },
   "sources": {
     "title": "Data source status",
@@ -329,13 +330,13 @@
     "mapCredit": "Base map: OpenFreeMap, OpenMapTiles and OpenStreetMap contributors",
     "staleWhy": "Rain and water level stations use 3 hours because several agencies report hourly and publish 1.5 to 2.5 hours after the observation.",
     "limit5": "Rainfall and water level are fetched from ThaiWater directly by your browser, because ThaiWater does not accept requests from this site's server. ThaiWater therefore sees a connection from your device, as it would when you open thaiwater.net, and each reload (every 10 minutes) uses about 1 MB of data.",
-    "searchCredit": "Subdistrict and district positions: Thai Meteorological Department · Place names: OpenStreetMap via Photon",
-    "limit6": "Place-name searches are sent through this site's server to the Photon service (OpenStreetMap data), so some places may be missing or spelled differently.",
+    "searchCredit": "Subdistrict and district positions: Thai Meteorological Department · Place names: Longdo Map and OpenStreetMap via Photon",
+    "limit6": "Place-name searches are sent through this site's server to a search service (Longdo Map or OpenStreetMap), so some places may be missing or spelled differently.",
     "limit7": "LINE rain alerts use LINE's free plan (300 messages a month, counted per recipient), so they are limited to 2 a day and 48 a month, and rely on forecasts only: rain may come without an alert, or an alert without rain."
   },
   "search": {
     "label": "Search for a place",
-    "placeholder": "Subdistrict, district, school, temple, market…",
+    "placeholder": "Hotel, condo, village, subdistrict, district…",
     "admin": "Subdistricts, districts, provinces",
     "places": "Places",
     "searching": "Searching…",
@@ -346,7 +347,8 @@
     "clear": "Clear search",
     "results": "{n} results",
     "homeTitle": "Check another place",
-    "homeHint": "Type a place name, then tap a result to see rain, water level and the forecast near it."
+    "homeHint": "Type a place name, then tap a result to see rain, water level and the forecast near it.",
+    "creditLongdo": "Place names from Longdo Map"
   },
   "alerts": {
     "title": "LINE rain alerts",

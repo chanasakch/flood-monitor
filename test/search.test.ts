@@ -82,3 +82,29 @@ describe('Photon place search', () => {
     expect(() => parsePhoton({ message: 'error' })).toThrow(FormatError);
   });
 });
+
+import { parseLongdo } from '../worker/fetchers/longdo';
+
+describe('Longdo place search', () => {
+  it('keeps named places inside Thailand and accepts numbers given as text', () => {
+    const json = {
+      meta: { keyword: 'โรงแรม' },
+      data: [
+        { id: 'A1', name: 'โรงแรมตัวอย่าง', address: 'ถนนสีลม บางรัก กรุงเทพมหานคร', lat: 13.7246, lon: 100.5286 },
+        { id: 'A2', name: 'คอนโดตัวอย่าง', address: '', lat: '13.80', lon: '100.56' },
+        { id: 'A3', name: '', lat: 13.7, lon: 100.5 },
+        { id: 'A4', name: 'Outside', lat: 35.6, lon: 139.7 },
+        { id: 'A5', name: 'โรงแรมตัวอย่าง', lat: 13.72461, lon: 100.52861 },
+      ],
+    };
+    const r = parseLongdo(json);
+    expect(r.map((x) => x.name)).toEqual(['โรงแรมตัวอย่าง', 'คอนโดตัวอย่าง']);
+    expect(r[0]).toEqual({ name: 'โรงแรมตัวอย่าง', detail: 'ถนนสีลม บางรัก กรุงเทพมหานคร', lat: 13.7246, lng: 100.5286, source: 'longdo' });
+    expect(r[1].lat).toBe(13.8);
+  });
+
+  it('rejects an answer without a result list, such as a key error', () => {
+    expect(() => parseLongdo({ error: 'key' })).toThrow(FormatError);
+    expect(() => parseLongdo(null)).toThrow(FormatError);
+  });
+});

@@ -27,7 +27,11 @@ setWorkerUrl(workerUrl);
 const STYLE = {
   light: 'https://tiles.openfreemap.org/styles/positron',
   dark: 'https://tiles.openfreemap.org/styles/dark',
+  /** Shows building, shop and hotel names from zoom 15. Light colours only. */
+  detail: 'https://tiles.openfreemap.org/styles/liberty',
 } as const;
+
+const styleUrl = (detail: boolean) => (detail ? STYLE.detail : STYLE[effectiveTheme()]);
 
 /** Draw order, bottom to top. Road sensors are the most local signal, so they sit on top. */
 const POINT_LAYERS: LayerType[] = ['cctv', 'highway', 'rain', 'water', 'road'];
@@ -46,6 +50,8 @@ export interface MapViewProps {
   visible: Record<LayerKey, boolean>;
   now: number;
   mode3d: boolean;
+  /** Detailed base map with place names instead of the plain one. */
+  detail: boolean;
   initialView: { lat: number; lng: number; zoom: number } | null;
   /** Move the camera here when it changes (search result). */
   focus: { lat: number; lng: number; zoom: number } | null;
@@ -224,7 +230,7 @@ export default function MapView(props: MapViewProps) {
     const view = latest.current.initialView;
     const map = new MlMap({
       container: el,
-      style: STYLE[effectiveTheme()],
+      style: styleUrl(latest.current.detail),
       ...(view ? { center: [view.lng, view.lat] as [number, number], zoom: view.zoom } : { bounds: THAILAND, fitBoundsOptions: { padding: 24 } }),
       minZoom: 4,
       maxZoom: 18,
@@ -311,7 +317,7 @@ export default function MapView(props: MapViewProps) {
       }
     });
 
-    const offTheme = onThemeChange(() => map.setStyle(STYLE[effectiveTheme()]));
+    const offTheme = onThemeChange(() => map.setStyle(styleUrl(latest.current.detail)));
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(el);
 
@@ -340,6 +346,16 @@ export default function MapView(props: MapViewProps) {
       pinRef.current = new Marker({ element: el }).setLngLat([props.pin.lng, props.pin.lat]).addTo(map);
     }
   }, [props.pin?.lat, props.pin?.lng]);
+
+  const firstDetail = useRef(true);
+  useEffect(() => {
+    // Skip the first run: the map was created with this style already.
+    if (firstDetail.current) {
+      firstDetail.current = false;
+      return;
+    }
+    mapRef.current?.setStyle(styleUrl(props.detail));
+  }, [props.detail]);
 
   useEffect(() => {
     const f = props.focus;

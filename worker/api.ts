@@ -15,6 +15,7 @@ import { handleAdmin, lineWebhook } from './admin';
 import { alertsStatus } from './alerts';
 import type { Env } from './env';
 import { getForecast } from './forecast';
+import { fetchLongdo } from './fetchers/longdo';
 import { fetchPhoton } from './fetchers/photon';
 import { fetchRainGraph } from './fetchers/thaiwater-rain';
 import { fetchWaterGraph } from './fetchers/thaiwater-water';
@@ -188,27 +189,46 @@ async function history(env: Env, id: string): Promise<Response> {
 const SEARCH_TTL_S = 7 * 86400;
 
 /**
- * Place-name search for the search box, answered by Photon (OpenStreetMap data) and cached for a
- * week per query. The visitor's browser never talks to the search service itself.
+ * Place-name search for the search box. Longdo Map (Thai place database) answers when its key
+ * is configured; OpenStreetMap (Photon) is the fallback. Cached for a week per query, and the
+ * visitor's browser never talks to either service itself.
  */
 async function search(env: Env, url: URL): Promise<Response> {
   const q = (url.searchParams.get('q') ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
   if (q.length < 2) return error(400, 'query_too_short');
-  const key = `geo:${q.toLowerCase()}`;
+  const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'th';
+  const longdoKey = env.LONGDO_API_KEY?.trim();
+  const key = `geo:${longdoKey ? 'l' : 'o'}:${lang}:${q.toLowerCase()}`;
   const nowS = Math.floor(Date.now() / 1000);
   const cached = await cacheGet(env.DB, key);
   if (cached && cached.expires_at > nowS) return json(cached.body, { maxAge: 3600 });
-  try {
-    const res: SearchResponse = { q, results: await fetchPhoton(q) };
-    const body = JSON.stringify(res);
-    await cachePut(env.DB, key, new Date().toISOString(), res.results.length ? SEARCH_TTL_S : 86400, body);
-    return json(body, { maxAge: 3600 });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error(`[search] failed: ${message}`);
-    if (cached) return json(cached.body);
-    return json({ q, results: [], error: message } satisfies SearchResponse);
+
+  let res: SearchResponse | null = null;
+  let failure: string | null = null;
+  if (longdoKey) {
+    try {
+      const results = await fetchLongdo(q, longdoKey, lang, env.SITE_URL ?? '');
+      if (results.length) res = { q, provider: 'longdo', results };
+    } catch (e) {
+      failure = e instanceof Error ? e.message : String(e);
+      console.error(`[search] longdo failed: ${failure}`);
+    }
   }
+  if (!res) {
+    try {
+      res = { q, provider: 'osm', results: await fetchPhoton(q) };
+    } catch (e) {
+      failure = e instanceof Error ? e.message : String(e);
+      console.error(`[search] photon failed: ${failure}`);
+    }
+  }
+  if (!res) {
+    if (cached) return json(cached.body);
+    return json({ q, results: [], error: failure ?? 'search failed' } satisfies SearchResponse);
+  }
+  const body = JSON.stringify(res);
+  await cachePut(env.DB, key, new Date().toISOString(), res.results.length ? SEARCH_TTL_S : 86400, body);
+  return json(body, { maxAge: 3600 });
 }
 
 // ---------- /api/sources ----------

@@ -1,4 +1,4 @@
-import { Box, Check, ChevronRight, ExternalLink, Layers as LayersIcon, MapPin, Radar, Save, X } from 'lucide-preact';
+import { Box, Building2, Check, ChevronRight, ExternalLink, Layers as LayersIcon, MapPin, Radar, Save, X } from 'lucide-preact';
 import { useEffect, useState } from 'preact/hooks';
 import { freshness } from '../../shared/levels';
 import { LAYER_SOURCE, SOURCES, STALE_MINUTES } from '../../shared/sources';
@@ -175,6 +175,8 @@ function LayerPanel({
   radarStale,
   mode3d,
   setMode3d,
+  detail,
+  setDetail,
   now,
 }: {
   visible: Record<LayerKey, boolean>;
@@ -186,6 +188,8 @@ function LayerPanel({
   radarStale: boolean;
   mode3d: boolean;
   setMode3d: (v: boolean) => void;
+  detail: boolean;
+  setDetail: (v: boolean) => void;
   now: number;
 }) {
   return (
@@ -278,6 +282,13 @@ function LayerPanel({
 
       <label class="switch-row mode3d">
         <span class="reading-icon" aria-hidden="true">
+          <Building2 size={20} />
+        </span>
+        <span class="switch-text">{t('map.detail')}</span>
+        <input type="checkbox" class="switch" role="switch" checked={detail} onChange={() => setDetail(!detail)} />
+      </label>
+      <label class="switch-row">
+        <span class="reading-icon" aria-hidden="true">
           <Box size={20} />
         </span>
         <span class="switch-text">{t('map.mode3d')}</span>
@@ -304,6 +315,21 @@ export function MapPage({ route }: { route: Route }) {
   const [slowNotice, setSlowNotice] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [focus, setFocus] = useState<{ lat: number; lng: number; zoom: number } | null>(null);
+  const [detail, setDetailState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('fm.mapDetail') !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const setDetail = (v: boolean) => {
+    setDetailState(v);
+    try {
+      localStorage.setItem('fm.mapDetail', v ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Load a layer only once it is switched on (the rain layer alone is over 4,000 stations).
   useEffect(() => {
@@ -358,6 +384,7 @@ export function MapPage({ route }: { route: Route }) {
     visible,
     now,
     mode3d,
+    detail,
     initialView,
     focus,
     pin,
@@ -386,7 +413,7 @@ export function MapPage({ route }: { route: Route }) {
             hideLabel
             onPick={(r) => {
               setSheet(false);
-              setFocus({ lat: r.lat, lng: r.lng, zoom: r.source === 'osm' ? 15 : 12 });
+              setFocus({ lat: r.lat, lng: r.lng, zoom: r.source === 'admin' ? 12 : 16 });
               setSel({ kind: 'point', lat: r.lat, lng: r.lng, name: r.name });
             }}
           />
@@ -437,6 +464,8 @@ export function MapPage({ route }: { route: Route }) {
               setSlowNotice(false);
               setMode3d(v);
             }}
+            detail={detail}
+            setDetail={setDetail}
             now={now}
           />
         </section>

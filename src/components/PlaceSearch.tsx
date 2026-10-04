@@ -23,6 +23,7 @@ export function PlaceSearch({ id, onPick, hideLabel = false }: Props) {
   const [places, setPlaces] = useState<SearchResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [placesDown, setPlacesDown] = useState(false);
+  const [provider, setProvider] = useState<'longdo' | 'osm' | undefined>(undefined);
   const input = useRef<HTMLInputElement>(null);
   const query = q.trim();
 
@@ -55,7 +56,8 @@ export function PlaceSearch({ id, onPick, hideLabel = false }: Props) {
     const timer = setTimeout(() => {
       searchPlaces(query).then((res) => {
         if (!alive) return;
-        setPlaces(res.results.slice(0, 6));
+        setPlaces(res.results.slice(0, 8));
+        setProvider(res.provider);
         setPlacesDown(!!res.error);
         setBusy(false);
       });
@@ -158,7 +160,7 @@ export function PlaceSearch({ id, onPick, hideLabel = false }: Props) {
             </p>
           )}
           {placesDown && !busy && <p class="search-note muted small">{t('search.placesDown')}</p>}
-          {places.length > 0 && <p class="search-credit muted">{t('search.credit')}</p>}
+          {places.length > 0 && <p class="search-credit muted">{t(provider === 'longdo' ? 'search.creditLongdo' : 'search.credit')}</p>}
         </div>
       )}
     </div>

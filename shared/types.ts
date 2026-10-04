@@ -157,12 +157,14 @@ export interface SearchResult {
   detail: string;
   lat: number;
   lng: number;
-  /** `admin`: subdistrict, district or province from the built-in list. `osm`: a named place from OpenStreetMap. */
-  source: 'admin' | 'osm';
+  /** `admin`: subdistrict, district or province from the built-in list. `longdo` / `osm`: a named place from that service. */
+  source: 'admin' | 'longdo' | 'osm';
 }
 
 export interface SearchResponse {
   q: string;
+  /** Which place-name service answered. */
+  provider?: 'longdo' | 'osm';
   results: SearchResult[];
   /** Set when the place-name service could not be reached; the built-in list still works. */
   error?: string;

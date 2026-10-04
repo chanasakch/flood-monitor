@@ -141,12 +141,13 @@ const remote = new Map<string, Promise<SearchResponse>>();
 
 export function searchPlaces(query: string): Promise<SearchResponse> {
   const q = query.replace(/\s+/g, ' ').trim();
-  let hit = remote.get(q);
+  const cacheKey = `${getLang()}:${q}`;
+  let hit = remote.get(cacheKey);
   if (!hit) {
-    hit = fetch(`/api/search?q=${encodeURIComponent(q)}`)
+    hit = fetch(`/api/search?q=${encodeURIComponent(q)}&lang=${getLang()}`)
       .then((r) => r.json() as Promise<SearchResponse>)
       .catch(() => ({ q, results: [], error: 'network' }));
-    remote.set(q, hit);
+    remote.set(cacheKey, hit);
     if (remote.size > 40) remote.delete(remote.keys().next().value as string);
   }
   return hit;

@@ -195,7 +195,16 @@ The search box only moves the map or opens a point; it never supplies readings.
   works offline and no query leaves the device. District and province positions are the mean of
   their subdistrict points. No licence is stated for the file; it holds administrative names
   and coordinates only. Rebuild it when administrative boundaries change.
-- **Named places** (schools, temples, markets, ...): Photon, `https://photon.komoot.io/api/`
+- **Named places, primary**: Longdo Map search, `https://search.longdo.com/mapsearch/json/search`
+  (`keyword`, `limit`, `locale`, `key`). Thai place database with hotels, condominiums, villages,
+  shops and sois. Key in secret `LONGDO_API_KEY`; without it this step is skipped. Called by the
+  Worker with the site address as referer, cached 7 days per query. Free threshold: 100,000
+  requests a month, 60 a minute, then no data until the next month
+  (https://map.longdo.com/api/terms). The terms allow showing the content together with other
+  information for end users and do not address use beside another base map; results are only
+  used to position our map and are credited to Longdo Map. Response format to be confirmed with
+  a real key (the parser rejects anything without a `data` list and falls back to Photon).
+- **Named places, fallback** (schools, temples, markets, ...): Photon, `https://photon.komoot.io/api/`
   (OpenStreetMap data, ODbL, no key). Called by the Worker at `/api/search?q=`, limited to
   Thailand's bounding box, cached in D1 for 7 days per query. The service asks for fair use and
   may throttle; when it fails the built-in list still works and the box says so. Typical
@@ -219,7 +228,8 @@ The search box only moves the map or opens a point; it never supplies readings.
 
 ## Map and other third-party resources
 
-- Base map: OpenFreeMap styles `https://tiles.openfreemap.org/styles/{positron,dark,liberty}`
+- Base map: OpenFreeMap styles `https://tiles.openfreemap.org/styles/{positron,dark,liberty}`.
+  `liberty` is the "detailed map" (place names from zoom 15, on by default); `positron` / `dark` are the plain ones
   (all answered 200). No API key. Attribution: OpenFreeMap © OpenMapTiles, data © OpenStreetMap contributors.
 - Terrain (3D): no free DEM source verified → terrain is not enabled; 3D mode uses pitch and
   extruded buildings only.
