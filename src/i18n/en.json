@@ -341,14 +341,18 @@
     "places": "Places",
     "searching": "Searching…",
     "none": "Nothing found for “{q}”",
-    "noneHint": "Try a subdistrict or district name, or pick a point on the map.",
+    "noneHint": "Not found? Paste a share link or coordinates from Google Maps here.",
     "placesDown": "Place names cannot be searched right now. Subdistricts, districts and provinces still work.",
     "credit": "Place names from OpenStreetMap",
     "clear": "Clear search",
     "results": "{n} results",
     "homeTitle": "Check another place",
     "homeHint": "Type a place name, then tap a result to see rain, water level and the forecast near it.",
-    "creditLongdo": "Place names from Longdo Map"
+    "creditLongdo": "Place names from Longdo Map",
+    "pasted": "From the pasted link or coordinates",
+    "pastedPoint": "Pasted position",
+    "pastedFailed": "Could not read a position from this link",
+    "pastedHint": "Use a share link from Google Maps, or paste coordinates such as 13.7033, 100.4778 (must be in Thailand)."
   },
   "alerts": {
     "title": "LINE rain alerts",

@@ -413,7 +413,7 @@ export function MapPage({ route }: { route: Route }) {
             hideLabel
             onPick={(r) => {
               setSheet(false);
-              setFocus({ lat: r.lat, lng: r.lng, zoom: r.source === 'admin' ? 12 : 16 });
+              setFocus({ lat: r.lat, lng: r.lng, zoom: r.source === 'admin' ? 12 : 16.5 });
               setSel({ kind: 'point', lat: r.lat, lng: r.lng, name: r.name });
             }}
           />

@@ -157,8 +157,11 @@ export interface SearchResult {
   detail: string;
   lat: number;
   lng: number;
-  /** `admin`: subdistrict, district or province from the built-in list. `longdo` / `osm`: a named place from that service. */
-  source: 'admin' | 'longdo' | 'osm';
+  /**
+   * `admin`: subdistrict, district or province from the built-in list. `longdo` / `osm`: a named
+   * place from that service. `pasted`: coordinates or a map link the visitor pasted.
+   */
+  source: 'admin' | 'longdo' | 'osm' | 'pasted';
 }
 
 export interface SearchResponse {

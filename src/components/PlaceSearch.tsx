@@ -1,8 +1,8 @@
-import { Landmark, MapPin, Search, X } from 'lucide-preact';
+import { Landmark, Link2, MapPin, Search, X } from 'lucide-preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { SearchResult } from '../../shared/types';
 import { t } from '../lib/i18n';
-import { loadGazetteer, searchAdmin, searchPlaces } from '../lib/search';
+import { loadGazetteer, looksPasted, resolvePasted, searchAdmin, searchPlaces } from '../lib/search';
 
 interface Props {
   /** Unique id for the input, so its label can point at it. */
@@ -27,10 +27,38 @@ export function PlaceSearch({ id, onPick, hideLabel = false }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const query = q.trim();
 
+  const pasted = looksPasted(query);
+  const [pastedResult, setPastedResult] = useState<SearchResult | null>(null);
+  const [pastedFailed, setPastedFailed] = useState(false);
+
+  // A pasted link or coordinates: go straight to that position instead of searching by name.
+  useEffect(() => {
+    let alive = true;
+    setPastedResult(null);
+    setPastedFailed(false);
+    if (!pasted) return;
+    setBusy(true);
+    resolvePasted(query).then((p) => {
+      if (!alive) return;
+      setBusy(false);
+      if (!p) return setPastedFailed(true);
+      setPastedResult({
+        name: p.name ?? t('search.pastedPoint'),
+        detail: `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`,
+        lat: Math.round(p.lat * 1e5) / 1e5,
+        lng: Math.round(p.lng * 1e5) / 1e5,
+        source: 'pasted',
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [query, pasted]);
+
   // Built-in list: search on every keystroke.
   useEffect(() => {
     let alive = true;
-    if (query.length < 2) {
+    if (query.length < 2 || pasted) {
       setAdmin([]);
       return;
     }
@@ -48,6 +76,7 @@ export function PlaceSearch({ id, onPick, hideLabel = false }: Props) {
     let alive = true;
     setPlaces([]);
     setPlacesDown(false);
+    if (pasted) return;
     if (query.length < 3) {
       setBusy(false);
       return;
@@ -66,20 +95,20 @@ export function PlaceSearch({ id, onPick, hideLabel = false }: Props) {
       alive = false;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, pasted]);
 
   const pick = (r: SearchResult) => {
     setQ('');
     onPick(r);
   };
 
-  const total = admin.length + places.length;
+  const total = admin.length + places.length + (pastedResult ? 1 : 0);
   const showPanel = query.length >= 2;
   const row = (r: SearchResult, i: number) => (
     <li key={`${r.source}-${i}-${r.lat}-${r.lng}`}>
       <button type="button" class="search-result" onClick={() => pick(r)}>
         <span class="reading-icon" aria-hidden="true">
-          {r.source === 'admin' ? <MapPin size={18} /> : <Landmark size={18} />}
+          {r.source === 'admin' ? <MapPin size={18} /> : r.source === 'pasted' ? <Link2 size={18} /> : <Landmark size={18} />}
         </span>
         <span class="search-text">
           <strong>{r.name}</strong>
@@ -112,7 +141,7 @@ export function PlaceSearch({ id, onPick, hideLabel = false }: Props) {
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              const first = admin[0] ?? places[0];
+              const first = pastedResult ?? admin[0] ?? places[0];
               if (first) pick(first);
             } else if (e.key === 'Escape' && q) {
               e.preventDefault();
@@ -140,6 +169,18 @@ export function PlaceSearch({ id, onPick, hideLabel = false }: Props) {
           <p class="sr-only" role="status">
             {busy ? t('search.searching') : t('search.results', { n: total })}
           </p>
+          {pastedResult && (
+            <>
+              <p class="search-group">{t('search.pasted')}</p>
+              <ul>{[pastedResult].map(row)}</ul>
+            </>
+          )}
+          {pasted && pastedFailed && !busy && (
+            <p class="search-note">
+              {t('search.pastedFailed')}
+              <span class="muted small">{t('search.pastedHint')}</span>
+            </p>
+          )}
           {admin.length > 0 && (
             <>
               <p class="search-group">{t('search.admin')}</p>
@@ -153,7 +194,7 @@ export function PlaceSearch({ id, onPick, hideLabel = false }: Props) {
             </>
           )}
           {busy && <p class="search-note muted">{t('search.searching')}</p>}
-          {!busy && total === 0 && (
+          {!busy && total === 0 && !pasted && (
             <p class="search-note">
               {t('search.none', { q: query })}
               <span class="muted small">{t('search.noneHint')}</span>

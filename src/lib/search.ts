@@ -1,4 +1,5 @@
 import type { SearchResponse, SearchResult } from '../../shared/types';
+import { isShortMapLink, parsePasted, type PastedPlace } from '../../shared/geolink';
 import { LONGDO_SEARCH_URL, parseLongdo } from '../../worker/fetchers/longdo';
 import { getLang } from './i18n';
 
@@ -191,4 +192,29 @@ export function searchPlaces(query: string): Promise<SearchResponse> {
     if (remote.size > 60) remote.delete(remote.keys().next().value as string);
   }
   return hit;
+}
+
+// ---- Pasted coordinates or a Google Maps link ----
+
+/** True when the text is a link or coordinates rather than a name to search for. */
+export function looksPasted(text: string): boolean {
+  return /^https?:\/\//i.test(text.trim()) || parsePasted(text) != null;
+}
+
+/**
+ * Position from pasted coordinates or a Google Maps link. Full links and coordinates are read
+ * in the browser; a short share link is followed once by our server.
+ */
+export async function resolvePasted(text: string): Promise<PastedPlace | null> {
+  const direct = parsePasted(text);
+  if (direct) return direct;
+  if (!isShortMapLink(text)) return null;
+  try {
+    const res = await fetch(`/api/maplink?u=${encodeURIComponent(text.trim())}`);
+    if (!res.ok) return null;
+    const p = (await res.json()) as PastedPlace;
+    return Number.isFinite(p.lat) && Number.isFinite(p.lng) ? p : null;
+  } catch {
+    return null;
+  }
 }

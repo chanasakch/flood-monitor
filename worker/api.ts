@@ -1,3 +1,4 @@
+import { isShortMapLink, parseGoogleMapsUrl } from '../shared/geolink';
 import { LAYER_SOURCE, LAYER_TYPES, RADAR_BOUNDS, SOURCE_IDS, SOURCES, THAILAND_BBOX } from '../shared/sources';
 import type {
   HistoryPoint,
@@ -221,6 +222,29 @@ function config(env: Env): Response {
   return json({ longdo_key: env.LONGDO_API_KEY?.trim() || null }, { maxAge: 3600 });
 }
 
+// ---------- /api/maplink ----------
+
+/**
+ * Follow a short Google Maps share link once and read the position from the address it points
+ * to. Only the redirect's `Location` header is read; no page content is fetched. The link must
+ * be one of the two known short-link hosts, so this cannot be used to make the Worker call
+ * arbitrary addresses.
+ */
+async function mapLink(url: URL): Promise<Response> {
+  const link = (url.searchParams.get('u') ?? '').trim();
+  if (!isShortMapLink(link)) return error(400, 'bad_link');
+  try {
+    const res = await fetch(link, { redirect: 'manual', signal: AbortSignal.timeout(8000) });
+    const target = res.headers.get('location');
+    const place = target ? parseGoogleMapsUrl(target) : null;
+    if (!place) return json({ error: 'no_position' }, { status: 404 });
+    return json(place, { maxAge: 3600 });
+  } catch (e) {
+    console.error(`[maplink] ${e instanceof Error ? e.message : String(e)}`);
+    return error(502, 'link_unreachable');
+  }
+}
+
 // ---------- /api/usage/longdo ----------
 
 /** Free monthly allowance of Longdo Map web-service requests. */
@@ -281,6 +305,7 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
     if (path === '/api/forecast') return await forecast(env, url);
     if (path === '/api/search') return await search(env, url);
     if (path === '/api/config') return config(env);
+    if (path === '/api/maplink') return await mapLink(url);
     if (path === '/api/radar/frame.png') return await radarFrame(env);
     if (path === '/api/layers/radar') return await radar(env);
     if (path.startsWith('/api/layers/')) {

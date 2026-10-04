@@ -232,6 +232,12 @@ The search box only moves the map or opens a point; it never supplies readings.
   (`/v2/bot/followers/ids` is for verified/premium accounts only). Message contents are not stored.
   The first contact gets a free reply confirming registration.
 
+- **Pasted coordinates or Google Maps links**: read from the pasted text itself
+  (`shared/geolink.ts`), pin position `!3d…!4d…` first. A short share link
+  (`maps.app.goo.gl`, `goo.gl/maps`) is followed once by the Worker at `/api/maplink`, which reads
+  only the redirect's `Location` header; no Google API is called and no page content is fetched.
+  Only those two hosts are accepted.
+
 ## Map and other third-party resources
 
 - Base map: OpenFreeMap styles `https://tiles.openfreemap.org/styles/{positron,dark,liberty}`.
