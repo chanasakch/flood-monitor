@@ -197,13 +197,19 @@ The search box only moves the map or opens a point; it never supplies readings.
   and coordinates only. Rebuild it when administrative boundaries change.
 - **Named places, primary**: Longdo Map search, `https://search.longdo.com/mapsearch/json/search`
   (`keyword`, `limit`, `locale`, `key`). Thai place database with hotels, condominiums, villages,
-  shops and sois. Key in secret `LONGDO_API_KEY`; without it this step is skipped. Called by the
-  Worker with the site address as referer, cached 7 days per query. Free threshold: 100,000
-  requests a month, 60 a minute, then no data until the next month
-  (https://map.longdo.com/api/terms). The terms allow showing the content together with other
-  information for end users and do not address use beside another base map; results are only
-  used to position our map and are credited to Longdo Map. Response format to be confirmed with
-  a real key (the parser rejects anything without a `data` list and falls back to Photon).
+  shops and sois. Verified 2026-10-05: `{ meta, data: [{ name, lat, lon, address, obsoleted, ... }] }`;
+  only name, address and position are kept. Fixture: `longdo-search.json`.
+  **Called by the visitor's browser, not by the Worker**: from Cloudflare's network the search
+  endpoint answers `Search Service API Key Error` with a valid key (tested from `colo=BKK` with
+  several header sets), while a normal Thai connection gets results and the response allows
+  cross-origin requests. This is Longdo's intended use: the key is restricted by domain
+  (Authorized Domains) and is handed to the page by `/api/config` from the `LONGDO_API_KEY`
+  secret, so it is not in the repository. Free threshold: 100,000 requests a month, 60 a minute,
+  then no data until the next month (https://map.longdo.com/api/terms). The terms allow showing
+  the content together with other information for end users and do not address use beside
+  another base map; results only position our map and are credited to Longdo Map.
+  Consequence: Longdo sees the visitor's connection and query. Without the key, or when Longdo
+  fails or finds nothing, the fallback below is used.
 - **Named places, fallback** (schools, temples, markets, ...): Photon, `https://photon.komoot.io/api/`
   (OpenStreetMap data, ODbL, no key). Called by the Worker at `/api/search?q=`, limited to
   Thailand's bounding box, cached in D1 for 7 days per query. The service asks for fair use and

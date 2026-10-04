@@ -1,4 +1,5 @@
 import type { SearchResponse, SearchResult } from '../../shared/types';
+import { LONGDO_SEARCH_URL, parseLongdo } from '../../worker/fetchers/longdo';
 import { getLang } from './i18n';
 
 // ---- Built-in list of provinces, districts and subdistricts (public/gazetteer.json) ----
@@ -135,7 +136,35 @@ export function searchAdmin(list: Entry[], query: string, limit = 6): SearchResu
   }));
 }
 
-// ---- Named places (schools, temples, markets...) through our own API ----
+// ---- Named places: Longdo Map straight from the browser, OpenStreetMap through our API as fallback ----
+
+let longdoKey: Promise<string | null> | null = null;
+
+/** The Longdo key comes from our API at run time; it is restricted to this site's domain by Longdo. */
+function getLongdoKey(): Promise<string | null> {
+  if (!longdoKey) {
+    longdoKey = fetch('/api/config')
+      .then((r) => r.json() as Promise<{ longdo_key?: string | null }>)
+      .then((c) => c.longdo_key ?? null)
+      .catch(() => null);
+  }
+  return longdoKey;
+}
+
+async function searchLongdo(q: string, key: string): Promise<SearchResult[]> {
+  // A plain GET without custom headers: no CORS preflight.
+  const res = await fetch(`${LONGDO_SEARCH_URL}?keyword=${encodeURIComponent(q)}&limit=8&locale=${getLang()}&key=${encodeURIComponent(key)}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parseLongdo(JSON.parse(await res.text()));
+}
+
+async function searchFallback(q: string): Promise<SearchResponse> {
+  try {
+    return (await (await fetch(`/api/search?q=${encodeURIComponent(q)}`)).json()) as SearchResponse;
+  } catch {
+    return { q, results: [], error: 'network' };
+  }
+}
 
 const remote = new Map<string, Promise<SearchResponse>>();
 
@@ -144,11 +173,20 @@ export function searchPlaces(query: string): Promise<SearchResponse> {
   const cacheKey = `${getLang()}:${q}`;
   let hit = remote.get(cacheKey);
   if (!hit) {
-    hit = fetch(`/api/search?q=${encodeURIComponent(q)}&lang=${getLang()}`)
-      .then((r) => r.json() as Promise<SearchResponse>)
-      .catch(() => ({ q, results: [], error: 'network' }));
+    hit = (async (): Promise<SearchResponse> => {
+      const key = await getLongdoKey();
+      if (key) {
+        try {
+          const results = await searchLongdo(q, key);
+          if (results.length) return { q, provider: 'longdo', results };
+        } catch {
+          /* Longdo unavailable, over quota or changed: use the fallback */
+        }
+      }
+      return searchFallback(q);
+    })();
     remote.set(cacheKey, hit);
-    if (remote.size > 40) remote.delete(remote.keys().next().value as string);
+    if (remote.size > 60) remote.delete(remote.keys().next().value as string);
   }
   return hit;
 }

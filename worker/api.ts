@@ -15,7 +15,6 @@ import { handleAdmin, lineWebhook } from './admin';
 import { alertsStatus } from './alerts';
 import type { Env } from './env';
 import { getForecast } from './forecast';
-import { fetchLongdo } from './fetchers/longdo';
 import { fetchPhoton } from './fetchers/photon';
 import { fetchRainGraph } from './fetchers/thaiwater-rain';
 import { fetchWaterGraph } from './fetchers/thaiwater-water';
@@ -184,51 +183,42 @@ async function history(env: Env, id: string): Promise<Response> {
   }
 }
 
-// ---------- /api/search ----------
+// ---------- /api/search and /api/config ----------
 
 const SEARCH_TTL_S = 7 * 86400;
 
 /**
- * Place-name search for the search box. Longdo Map (Thai place database) answers when its key
- * is configured; OpenStreetMap (Photon) is the fallback. Cached for a week per query, and the
- * visitor's browser never talks to either service itself.
+ * Place-name search through Photon (OpenStreetMap), cached for a week per query. This is the
+ * fallback: the browser asks Longdo Map first (see /api/config), because Longdo refuses search
+ * requests that come from Cloudflare's network.
  */
 async function search(env: Env, url: URL): Promise<Response> {
   const q = (url.searchParams.get('q') ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
   if (q.length < 2) return error(400, 'query_too_short');
-  const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'th';
-  const longdoKey = env.LONGDO_API_KEY?.trim();
-  const key = `geo:${longdoKey ? 'l' : 'o'}:${lang}:${q.toLowerCase()}`;
+  const key = `geo:${q.toLowerCase()}`;
   const nowS = Math.floor(Date.now() / 1000);
   const cached = await cacheGet(env.DB, key);
   if (cached && cached.expires_at > nowS) return json(cached.body, { maxAge: 3600 });
-
-  let res: SearchResponse | null = null;
-  let failure: string | null = null;
-  if (longdoKey) {
-    try {
-      const results = await fetchLongdo(q, longdoKey, lang, env.SITE_URL ?? '');
-      if (results.length) res = { q, provider: 'longdo', results };
-    } catch (e) {
-      failure = e instanceof Error ? e.message : String(e);
-      console.error(`[search] longdo failed: ${failure}`);
-    }
-  }
-  if (!res) {
-    try {
-      res = { q, provider: 'osm', results: await fetchPhoton(q) };
-    } catch (e) {
-      failure = e instanceof Error ? e.message : String(e);
-      console.error(`[search] photon failed: ${failure}`);
-    }
-  }
-  if (!res) {
+  try {
+    const res: SearchResponse = { q, provider: 'osm', results: await fetchPhoton(q) };
+    const body = JSON.stringify(res);
+    await cachePut(env.DB, key, new Date().toISOString(), res.results.length ? SEARCH_TTL_S : 86400, body);
+    return json(body, { maxAge: 3600 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[search] failed: ${message}`);
     if (cached) return json(cached.body);
-    return json({ q, results: [], error: failure ?? 'search failed' } satisfies SearchResponse);
+    return json({ q, results: [], error: message } satisfies SearchResponse);
   }
-  const body = JSON.stringify(res);
-  await cachePut(env.DB, key, new Date().toISOString(), res.results.length ? SEARCH_TTL_S : 86400, body);
-  return json(body, { maxAge: 3600 });
+}
+
+/**
+ * Settings the page needs at run time. The Longdo Map key is meant to be used from the browser:
+ * Longdo ties it to the site's domain (Authorized Domains), so it is not a secret in the way the
+ * TMD and LINE tokens are. It is served from here rather than committed to the public repository.
+ */
+function config(env: Env): Response {
+  return json({ longdo_key: env.LONGDO_API_KEY?.trim() || null }, { maxAge: 3600 });
 }
 
 // ---------- /api/sources ----------
@@ -266,6 +256,7 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
     if (path === '/api/sources') return await sources(env);
     if (path === '/api/forecast') return await forecast(env, url);
     if (path === '/api/search') return await search(env, url);
+    if (path === '/api/config') return config(env);
     if (path === '/api/radar/frame.png') return await radarFrame(env);
     if (path === '/api/layers/radar') return await radar(env);
     if (path.startsWith('/api/layers/')) {

@@ -103,6 +103,21 @@ describe('Longdo place search', () => {
     expect(r[1].lat).toBe(13.8);
   });
 
+  it('parses a real response (fixture) into name, address and position', () => {
+    const r = parseLongdo(fixtureJson('longdo-search.json'));
+    expect(r[0]).toEqual({
+      name: 'โรงแรมแมนดารินโอเรียนเต็ล เจริญกรุง',
+      detail: '48 ถนนเจริญกรุง แขวงบางรัก เขตบางรัก กรุงเทพมหานคร 10500',
+      lat: 13.72379,
+      lng: 100.51399,
+      source: 'longdo',
+    });
+  });
+
+  it('skips places marked as no longer existing', () => {
+    expect(parseLongdo({ data: [{ name: 'ร้านที่ปิดแล้ว', lat: 13.7, lon: 100.5, obsoleted: true }] })).toEqual([]);
+  });
+
   it('rejects an answer without a result list, such as a key error', () => {
     expect(() => parseLongdo({ error: 'key' })).toThrow(FormatError);
     expect(() => parseLongdo(null)).toThrow(FormatError);

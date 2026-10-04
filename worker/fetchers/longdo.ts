@@ -1,8 +1,9 @@
 import type { SearchResult } from '../../shared/types';
-import { assertFormat, fetchJson } from '../lib/http';
+import { assertFormat } from '../lib/http';
 import { inThailandArea, num, text } from './util';
 
-const URL_SEARCH = 'https://search.longdo.com/mapsearch/json/search';
+/** Called from the browser (src/lib/search.ts): Longdo rejects search requests from Cloudflare's network. */
+export const LONGDO_SEARCH_URL = 'https://search.longdo.com/mapsearch/json/search';
 
 /**
  * Normalise Longdo Map search results (Thai place database: hotels, condominiums, shops, sois...).
@@ -18,16 +19,11 @@ export function parseLongdo(json: unknown): SearchResult[] {
     const lng = num(row?.lon);
     const name = text(row?.name);
     if (!name || lat == null || lng == null || !inThailandArea(lat, lng)) continue;
+    if (row.obsoleted === true) continue; // place marked as no longer existing
     const key = `${name}|${lat.toFixed(3)}|${lng.toFixed(3)}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({ name, detail: text(row.address) ?? '', lat: Math.round(lat * 1e5) / 1e5, lng: Math.round(lng * 1e5) / 1e5, source: 'longdo' });
   }
   return out;
-}
-
-export async function fetchLongdo(query: string, key: string, lang: 'th' | 'en', referer: string): Promise<SearchResult[]> {
-  const url = `${URL_SEARCH}?keyword=${encodeURIComponent(query)}&limit=8&locale=${lang}&key=${encodeURIComponent(key)}`;
-  // Longdo keys are tied to the site they were registered for; identify our site as the caller.
-  return parseLongdo(await fetchJson(url, { timeoutMs: 9000, headers: { referer } }));
 }

@@ -1,0 +1,54 @@
+{
+ "meta": {
+  "hasmore": false,
+  "start": 0,
+  "end": 1,
+  "keyword": "โรงแรมแมนดารินโอเรียนเต็ล"
+ },
+ "data": [
+  {
+   "type": "poi",
+   "id": "A10039547",
+   "name": "โรงแรมแมนดารินโอเรียนเต็ล เจริญกรุง",
+   "lat": 13.7237934902165,
+   "lon": 100.513989762381,
+   "icon": "hotel.png",
+   "tag": [
+    "Chao phraya Hotel",
+    "hotel",
+    "โรงแรม",
+    "%c"
+   ],
+   "url": "",
+   "address": "48 ถนนเจริญกรุง แขวงบางรัก เขตบางรัก กรุงเทพมหานคร 10500",
+   "tel": "+66-2659-9000",
+   "contributor": "DMAP_GBOOK",
+   "verified": true,
+   "obsoleted": false
+  },
+  {
+   "type": "poi",
+   "id": "A10889541",
+   "name": "ตู้เต่าบิน โรงแรมแมนดารินโอเรียนเต็ล พรีเมียม แมชชีน",
+   "lat": 13.72421,
+   "lon": 100.51412,
+   "icon": "taobin.png",
+   "tag": [
+    "Tao Bin",
+    "เต่าบิน",
+    "%c"
+   ],
+   "url": "",
+   "address": "แขวงบางรัก เขตบางรัก กรุงเทพมหานคร 10500 ประเทศไทย",
+   "tel": "",
+   "contributor": "longdo_thirdparty",
+   "verified": true,
+   "obsoleted": false,
+   "working_hours": {
+    "remark": "",
+    "hours": []
+   },
+   "custom_id": "taobin-teaj3KfhQjuC6FKLdAQkTA"
+  }
+ ]
+}

@@ -23,7 +23,7 @@ function securityHeaders(): Plugin {
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: blob: https://tiles.openfreemap.org",
         "font-src 'self'",
-        "connect-src 'self' https://tiles.openfreemap.org https://api-v3.thaiwater.net",
+        "connect-src 'self' https://tiles.openfreemap.org https://api-v3.thaiwater.net https://search.longdo.com",
         "worker-src 'self' blob:",
         "manifest-src 'self'",
         "base-uri 'self'",

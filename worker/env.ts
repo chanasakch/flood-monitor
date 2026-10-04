@@ -5,7 +5,10 @@ export interface Env {
   TMD_API_TOKEN?: string;
   /** LINE Messaging API channel access token (secret). Without it alerts are only logged. */
   LINE_CHANNEL_ACCESS_TOKEN?: string;
-  /** Longdo Map API key (secret) for place search. Without it the search uses OpenStreetMap only. */
+  /**
+   * Longdo Map API key for place search, handed to the browser by /api/config (Longdo restricts
+   * it by domain). Without it the search uses OpenStreetMap only.
+   */
   LONGDO_API_KEY?: string;
   /** LINE channel secret (secret), to verify webhook requests really come from LINE. */
   LINE_CHANNEL_SECRET?: string;
