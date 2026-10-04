@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isShortMapLink, parseCoordinates, parseGoogleMapsUrl, parsePasted } from '../shared/geolink';
+import { extractUrl, isShortMapLink, parseCoordinates, parseGoogleMapsUrl, parsePasted, shortLinkIn } from '../shared/geolink';
 
 // The address a real short share link redirected to (2026-10-05).
 const REAL =
@@ -52,5 +52,15 @@ describe('Google Maps links', () => {
     expect(parsePasted('13.7, 100.5')).toMatchObject({ lat: 13.7, lng: 100.5 });
     expect(parsePasted(REAL)?.name).toContain('INNER PEACE');
     expect(parsePasted('โรงแรม')).toBeNull();
+  });
+
+  it('finds the link inside shared text that also carries the place name', () => {
+    const shared = 'INNER PEACE สาทร - ท่าพระ (by PEACE)\nhttps://maps.app.goo.gl/g2upLrPTUePyWk13A';
+    expect(extractUrl(shared)).toBe('https://maps.app.goo.gl/g2upLrPTUePyWk13A');
+    expect(shortLinkIn(shared)).toBe('https://maps.app.goo.gl/g2upLrPTUePyWk13A');
+    expect(shortLinkIn('ดูที่นี่ https://maps.app.goo.gl/g2upLrPTUePyWk13A?g_st=ic.')).toBe('https://maps.app.goo.gl/g2upLrPTUePyWk13A?g_st=ic');
+    expect(parsePasted(`ไปที่นี่กัน ${REAL} นะ`)?.lat).toBe(13.7033281);
+    expect(shortLinkIn('โรงแรมแถวสาทร')).toBeNull();
+    expect(shortLinkIn('https://example.com/abc')).toBeNull();
   });
 });

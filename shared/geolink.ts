@@ -19,6 +19,15 @@ export function parseCoordinates(text: string): PastedPlace | null {
   return inThailand(lat, lng) ? { lat, lng, name: null } : null;
 }
 
+/**
+ * The first web address inside pasted text. Sharing from the Google Maps app usually copies the
+ * place name together with the link, so the link is rarely alone.
+ */
+export function extractUrl(text: string): string | null {
+  const m = /https?:\/\/[^\s<>"']+/i.exec(text);
+  return m ? m[0].replace(/[)\].,;]+$/, '') : null;
+}
+
 /** Short share links that must be followed once to find the full address. */
 export function isShortMapLink(text: string): boolean {
   return /^https:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps)\/[A-Za-z0-9_-]+(\?[^\s]*)?$/.test(text.trim());
@@ -63,7 +72,14 @@ export function parseGoogleMapsUrl(text: string): PastedPlace | null {
   );
 }
 
-/** Coordinates or a full link, whichever the text is. Short links need the server (see /api/maplink). */
+/** Coordinates or a full link found in the text. Short links need the server (see /api/maplink). */
 export function parsePasted(text: string): PastedPlace | null {
-  return parseCoordinates(text) ?? parseGoogleMapsUrl(text);
+  const url = extractUrl(text);
+  return parseCoordinates(text) ?? (url ? parseGoogleMapsUrl(url) : null);
+}
+
+/** The short share link inside the text, if there is one. */
+export function shortLinkIn(text: string): string | null {
+  const url = extractUrl(text);
+  return url && isShortMapLink(url) ? url : null;
 }
