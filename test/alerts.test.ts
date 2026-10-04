@@ -153,3 +153,37 @@ describe('twice-daily summary', () => {
     expect(decide(rows.slice(0, 1), at('18:00'), 48)).toEqual({ send: 'alert', sendNo: 2 });
   });
 });
+
+describe('alert areas', () => {
+  it('has unique ids usable in coverage records, all inside Thailand, on separate forecast cells', () => {
+    const ids = ALERT_AREAS.map((a) => a.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const a of ALERT_AREAS) {
+      expect(a.id).toMatch(/^[a-z]+$/);
+      expect(a.lat).toBeGreaterThan(5);
+      expect(a.lat).toBeLessThan(21);
+      expect(a.lng).toBeGreaterThan(97);
+      expect(a.lng).toBeLessThan(106);
+    }
+    const cells = ALERT_AREAS.map((a) => `${a.lat.toFixed(2)},${a.lng.toFixed(2)}`);
+    expect(new Set(cells).size).toBe(cells.length);
+  });
+
+  it('places the Rayong points in the right districts of the built-in list', async () => {
+    const { readFileSync } = await import('node:fs');
+    const g = JSON.parse(readFileSync(decodeURIComponent(new URL('../public/gazetteer.json', import.meta.url).pathname), 'utf8')) as {
+      p: [string, string][];
+      a: [string, string, number][];
+      t: [string, number, number, number][];
+    };
+    const find = (tambon: string, district: string) => {
+      const t = g.t.find((x) => x[0] === tambon && g.a[x[1]][0] === district && g.p[g.a[x[1]][2]][0] === 'ระยอง');
+      return t ? { lat: t[2], lng: t[3] } : null;
+    };
+    const area = (id: string) => ALERT_AREAS.find((a) => a.id === id)!;
+    expect(find('นิคมพัฒนา', 'นิคมพัฒนา')).toEqual({ lat: area('nikhomphatthana').lat, lng: area('nikhomphatthana').lng });
+    expect(find('มาบตาพุด', 'เมืองระยอง')).toEqual({ lat: area('maptaphut').lat, lng: area('maptaphut').lng });
+    expect(find('ท่าประดู่', 'เมืองระยอง')).toEqual({ lat: area('mueangrayong').lat, lng: area('mueangrayong').lng });
+    expect(find('ปลวกแดง', 'ปลวกแดง')).toEqual({ lat: area('pluakdaeng').lat, lng: area('pluakdaeng').lng });
+  });
+});
