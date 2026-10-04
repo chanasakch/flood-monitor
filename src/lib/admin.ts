@@ -1,3 +1,5 @@
+import type { AreaAlert, AreaOutlook } from '../../shared/alerts';
+import type { MessageTemplate, TemplateKind } from '../../shared/templates';
 import type { AdminLineState } from '../../shared/types';
 
 /** Admin calls always send this header; the server rejects state changes without it (CSRF guard). */
@@ -28,3 +30,16 @@ export const sendLine = (text: string, to: 'all' | string[]) =>
     method: 'POST',
     body: JSON.stringify({ text, to }),
   });
+
+export const getTemplates = () =>
+  call<{ templates?: Record<TemplateKind, MessageTemplate>; defaults?: Record<TemplateKind, MessageTemplate> }>('/api/admin/line/templates');
+/** Save a template, or restore the default when `template` is null. */
+export const saveTemplate = (kind: TemplateKind, template: MessageTemplate | null) =>
+  call<{ ok?: boolean; template?: MessageTemplate; errors?: string[]; longest?: number }>('/api/admin/line/templates', {
+    method: 'PUT',
+    body: JSON.stringify(template ? { kind, template } : { kind, reset: true }),
+  });
+export const lineSample = () =>
+  call<{ now: number; siteUrl: string; alerts: AreaAlert[]; outlooks: AreaOutlook[]; sources: string[] }>('/api/admin/line/sample');
+export const sendTest = (text: string, userId: string) =>
+  call<{ ok?: boolean; error?: string; message?: string }>('/api/admin/line/test', { method: 'POST', body: JSON.stringify({ text, userId }) });

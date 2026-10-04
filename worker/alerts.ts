@@ -2,9 +2,7 @@ import {
   ALERT_AREAS,
   ALERT_LIMITS,
   alreadyAnnounced,
-  composeAlert,
   composeQuotaNotice,
-  composeSummary,
   currentSlot,
   decide,
   encodeCoverage,
@@ -15,7 +13,9 @@ import {
   type AreaOutlook,
   type SentRow,
 } from '../shared/alerts';
+import { renderAlert, renderSummary } from '../shared/templates';
 import type { ForecastResponse } from '../shared/types';
+import { loadTemplates } from './settings';
 import type { AlertsStatus } from '../shared/types';
 import { cacheGet, cachePut } from './db';
 import type { Env } from './env';
@@ -141,6 +141,7 @@ export async function runAlerts(env: Env): Promise<void> {
     return [...out];
   };
 
+  const templates = await loadTemplates(env);
   let text: string;
   let kind: 'alert' | 'summary';
   let ids: string[];
@@ -150,7 +151,7 @@ export async function runAlerts(env: Env): Promise<void> {
     const outlooks: AreaOutlook[] = ALERT_AREAS.filter((a) => forecasts.has(a.id)).map((a) => outlookArea(a, forecasts.get(a.id)!, now));
     const wet = outlooks.filter((o) => o.kind);
     if (!wet.length) return;
-    text = composeSummary(outlooks, now, siteUrl, decision.sendNo, cap, sourcesOf(wet.map((o) => o.area.id)));
+    text = renderSummary(templates.summary, outlooks, { now, siteUrl, sources: sourcesOf(wet.map((o) => o.area.id)), counter: { sendNo: decision.sendNo, cap } });
     kind = 'summary';
     ids = [encodeCoverage(outlooks)];
   } else {
@@ -164,7 +165,7 @@ export async function runAlerts(env: Env): Promise<void> {
     }
     if (!hits.length) return;
     ids = hits.map((h) => h.area.id);
-    text = composeAlert(hits, now, siteUrl, decision.sendNo, cap, sourcesOf(ids));
+    text = renderAlert(templates.alert, hits, { now, siteUrl, sources: sourcesOf(ids), counter: { sendNo: decision.sendNo, cap } });
     kind = 'alert';
   }
   if (!token) return console.log(`[alerts] (no LINE token) would send: ${text}`);

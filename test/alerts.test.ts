@@ -118,7 +118,7 @@ describe('twice-daily summary', () => {
     expect(o.maxProb).toBe(85);
   });
 
-  it('reports a dry area as low chance and lists every area', () => {
+  it('reports a dry area as below the alert threshold, with its highest chance, and lists every area', () => {
     const now = at('08:00');
     const wet = outlookArea(ALERT_AREAS[0], fcAt(now, [], [{ time: iso(14), mm: 1, prob: 70 }, { time: iso(15), mm: 1, prob: 75 }]), now);
     const dry = outlookArea(ALERT_AREAS[5], fcAt(now, [], [{ time: iso(14), mm: 0, prob: 10 }]), now);
@@ -127,7 +127,7 @@ describe('twice-daily summary', () => {
     const lines = text.split('\n');
     expect(lines[0]).toBe('🌦️ พยากรณ์ฝน 12 ชม. ข้างหน้า · 08:00 น.');
     expect(lines[1]).toBe('• มีนบุรี: โอกาสฝนสูง ช่วง 14:00–16:00 น. (สูงสุด 75%)');
-    expect(lines[2]).toBe('• ลับแล อุตรดิตถ์: โอกาสฝนต่ำ');
+    expect(lines[2]).toBe('• ลับแล อุตรดิตถ์: ยังไม่ถึงเกณฑ์เตือน (โอกาสฝนสูงสุด 10%)');
   });
 
   it('skips an urgent alert that the last summary already announced', () => {

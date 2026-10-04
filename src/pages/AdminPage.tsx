@@ -6,6 +6,7 @@ import { Banner, Chip } from '../components/Status';
 import { adminLogin, adminLogout, adminMe, composeFromForecast, lineState, sendLine } from '../lib/admin';
 import { formatAgo, formatDateTime, formatNumber } from '../lib/format';
 import { useNow } from '../lib/hooks';
+import { TemplateEditor } from './TemplateEditor';
 import { t } from '../lib/i18n';
 
 // ---------- sign in ----------
@@ -60,6 +61,7 @@ function LoginForm({ onDone }: { onDone: () => void }) {
 
 function SendPanel({ onLogout }: { onLogout: () => void }) {
   const now = useNow();
+  const [tab, setTab] = useState<'send' | 'templates'>('send');
   const [state, setState] = useState<AdminLineState | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [text, setText] = useState('');
@@ -121,8 +123,29 @@ function SendPanel({ onLogout }: { onLogout: () => void }) {
 
   const webhookOk = state.webhook?.active && state.webhook.endpoint?.endsWith('/api/line/webhook');
 
+  const tabs = (
+    <div class="segmented admin-tabs" role="group" aria-label={t('admin.title')}>
+      <button type="button" aria-pressed={tab === 'send'} onClick={() => setTab('send')}>
+        {t('tpl.tabSend')}
+      </button>
+      <button type="button" aria-pressed={tab === 'templates'} onClick={() => setTab('templates')}>
+        {t('tpl.tabTemplates')}
+      </button>
+    </div>
+  );
+
+  if (tab === 'templates') {
+    return (
+      <div class="stack">
+        {tabs}
+        <TemplateEditor users={state.users} accountName={state.account?.name ?? 'LINE'} />
+      </div>
+    );
+  }
+
   return (
     <div class="stack">
+      {tabs}
       <section class="card">
         <div class="card-head">
           <h2>{t('admin.accountTitle')}</h2>

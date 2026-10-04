@@ -1,9 +1,11 @@
-import { ALERT_AREAS, evaluateArea } from '../shared/alerts';
+import { ALERT_AREAS, evaluateArea, outlookArea, type AreaAlert, type AreaOutlook } from '../shared/alerts';
+import { checkTemplate, DEFAULT_TEMPLATES, normalizeTemplate, renderSummary, worstCaseLength, type TemplateKind } from '../shared/templates';
 import type { AdminLineState, LineUser } from '../shared/types';
 import { clearCookie, isAdmin, lockedOut, makeSession, recordLoginFailure, safeEqual, sessionCookie, validLineSignature } from './auth';
 import type { Env } from './env';
 import { getForecast } from './forecast';
 import { accountInfo, broadcast, multicast, profile, reply, webhookEndpoint } from './line';
+import { loadTemplates, resetTemplate, saveTemplate } from './settings';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' };
 const json = (data: unknown, status = 200, extra: Record<string, string> = {}) =>
@@ -68,31 +70,82 @@ async function lineState(env: Env): Promise<AdminLineState> {
   return { configured: !!token, account, webhook, users, recent: sends.map((r) => ({ ...r, ok: Number(r.ok) })) };
 }
 
-// ---------- compose from the current forecast ----------
+// ---------- forecast data for compose and preview ----------
 
-/** Text describing the forecast for every area right now, for the admin to edit before sending. */
-async function forecastText(env: Env): Promise<string> {
+interface Sample {
+  now: number;
+  siteUrl: string;
+  alerts: AreaAlert[];
+  outlooks: AreaOutlook[];
+  sources: string[];
+}
+
+/** Current forecast turned into the inputs of the message renderers (2-hour alerts and 12-hour outlooks). */
+async function currentSample(env: Env): Promise<Sample> {
   const now = Date.now();
-  const hhmm = (ms: number) => new Date(ms + 7 * 3600000).toISOString().slice(11, 16);
-  const lines = [`🌦️ สภาพอากาศ ${hhmm(now)} น. (พยากรณ์ 2 ชม. ข้างหน้า)`];
+  const alerts: AreaAlert[] = [];
+  const outlooks: AreaOutlook[] = [];
+  const sources = new Set<string>();
   for (const area of ALERT_AREAS) {
     try {
       const { res } = await getForecast(env, area.lat, area.lng);
       const hit = evaluateArea(area, res, now);
-      const prob = res.openmeteo.hours.find((h) => Date.parse(h.time) >= Math.floor(now / 3600000) * 3600000)?.prob;
-      if (hit) {
-        const when = hit.atMs <= now ? 'ตอนนี้' : `ช่วง ${hhmm(hit.atMs)} น.`;
-        const what = hit.kind === 'storm' ? 'เสี่ยงพายุฝนฟ้าคะนอง' : hit.kind === 'heavy' ? 'ฝนหนัก' : `โอกาสฝน ${hit.prob}%`;
-        lines.push(`• ${area.name}: ${what} ${when}`);
-      } else {
-        lines.push(`• ${area.name}: โอกาสฝนต่ำ${prob != null ? ` (${prob}%)` : ''}`);
-      }
+      if (hit) alerts.push(hit);
+      outlooks.push(outlookArea(area, res, now));
+      if (res.tmd.ok) sources.add('กรมอุตุนิยมวิทยา');
+      if (res.openmeteo.ok) sources.add('Open-Meteo');
     } catch {
-      lines.push(`• ${area.name}: ไม่มีข้อมูลพยากรณ์`);
+      /* area left out of the sample */
     }
   }
-  lines.push('', `ดูรายละเอียด: ${env.SITE_URL ?? ''}`, 'ใช้ประกอบการตัดสินใจเท่านั้น โปรดตรวจสอบประกาศทางการอีกครั้ง');
-  return lines.join('\n');
+  return { now, siteUrl: env.SITE_URL ?? '', alerts, outlooks, sources: [...sources] };
+}
+
+/** Text for the send page: the 12-hour outlook in the saved summary format, without the monthly counter. */
+async function forecastText(env: Env): Promise<string> {
+  const [sample, templates] = await Promise.all([currentSample(env), loadTemplates(env)]);
+  return renderSummary(templates.summary, sample.outlooks, { now: sample.now, siteUrl: sample.siteUrl, sources: sample.sources });
+}
+
+// ---------- templates ----------
+
+async function putTemplate(request: Request, env: Env): Promise<Response> {
+  if (!hasAdminHeader(request)) return json({ error: 'bad_request' }, 400);
+  const body = await readJson<{ kind?: TemplateKind; template?: unknown; reset?: boolean }>(request);
+  const kind = body?.kind;
+  if (kind !== 'alert' && kind !== 'summary') return json({ error: 'bad_kind' }, 400);
+  if (body?.reset) {
+    await resetTemplate(env, kind);
+    return json({ ok: true, template: DEFAULT_TEMPLATES[kind] });
+  }
+  const tpl = normalizeTemplate(kind, body?.template);
+  const longest = worstCaseLength(kind, tpl, ALERT_AREAS, { now: Date.now(), siteUrl: env.SITE_URL ?? '', sources: ['กรมอุตุนิยมวิทยา', 'Open-Meteo'], counter: { sendNo: 48, cap: 48 } });
+  const check = checkTemplate(kind, (body?.template ?? {}) as object, longest);
+  if (!check.ok) return json({ error: 'invalid', errors: check.errors, longest }, 400);
+  await saveTemplate(env, kind, tpl);
+  return json({ ok: true, template: tpl, longest });
+}
+
+/** Send the previewed text to one chosen person only, marked as a test. Costs one message. */
+async function sendTest(request: Request, env: Env): Promise<Response> {
+  if (!hasAdminHeader(request)) return json({ error: 'bad_request' }, 400);
+  const token = env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
+  if (!token) return json({ error: 'line_not_configured' }, 503);
+  const body = await readJson<{ text?: string; userId?: string }>(request);
+  const text = `[ทดสอบรูปแบบข้อความ]\n${String(body?.text ?? '').trim()}`;
+  if (text.length > 5000 || !body?.text?.trim()) return json({ error: 'bad_text' }, 400);
+  const user = await env.DB.prepare('SELECT user_id FROM line_users WHERE user_id = ? AND following = 1').bind(String(body?.userId ?? '')).first<{ user_id: string }>();
+  if (!user) return json({ error: 'no_recipients' }, 400);
+  const at = new Date().toISOString();
+  try {
+    await multicast(token, [user.user_id], text);
+    await env.DB.prepare("INSERT INTO alert_log (sent_at, kind, areas, message, ok, error, recipients) VALUES (?, 'manual', 'test', ?, 1, NULL, 1)").bind(at, text).run();
+    return json({ ok: true, recipients: 1 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    await env.DB.prepare("INSERT INTO alert_log (sent_at, kind, areas, message, ok, error, recipients) VALUES (?, 'manual', 'test', ?, 0, ?, 1)").bind(at, text, message).run();
+    return json({ error: 'send_failed', message }, 502);
+  }
 }
 
 // ---------- send ----------
@@ -208,6 +261,10 @@ export async function handleAdmin(request: Request, env: Env, path: string): Pro
   if (!admin) return json({ error: 'unauthorized' }, 401);
   if (path === '/api/admin/line' && request.method === 'GET') return json(await lineState(env));
   if (path === '/api/admin/line/compose' && request.method === 'GET') return json({ text: await forecastText(env) });
+  if (path === '/api/admin/line/templates' && request.method === 'GET') return json({ templates: await loadTemplates(env), defaults: DEFAULT_TEMPLATES });
+  if (path === '/api/admin/line/templates' && request.method === 'PUT') return putTemplate(request, env);
+  if (path === '/api/admin/line/sample' && request.method === 'GET') return json(await currentSample(env));
+  if (path === '/api/admin/line/test' && request.method === 'POST') return sendTest(request, env);
   if (path === '/api/admin/line/send' && request.method === 'POST') return send(request, env);
   return json({ error: 'not_found' }, 404);
 }

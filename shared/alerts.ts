@@ -1,3 +1,4 @@
+import { DEFAULT_TEMPLATES, renderAlert, renderSummary } from './templates';
 import type { ForecastHour, ForecastResponse } from './types';
 
 // ---- Areas the family wants alerts for. Edit this list to change them. ----
@@ -177,54 +178,14 @@ export function alreadyAnnounced(alert: AreaAlert, coverage: string[]): boolean 
 
 // ---- Message ----
 
-const hhmm = (ms: number) => new Date(ms + 7 * 3600000).toISOString().slice(11, 16);
-
-function describe(a: AreaAlert, now: number): string {
-  const when = a.atMs <= now ? 'ตอนนี้' : `ช่วง ${hhmm(a.atMs)} น.`;
-  const what =
-    a.kind === 'storm'
-      ? 'เสี่ยงพายุฝนฟ้าคะนอง'
-      : a.kind === 'heavy'
-        ? `ฝนหนัก${a.mm != null ? ` ราว ${Math.round(a.mm)} มม./ชม.` : ''}`
-        : `โอกาสฝน ${a.prob}%`;
-  return `• ${a.area.name}: ${what} ${when}`;
-}
-
-/** One message covering every area that needs an alert. Forecast wording only: no promised stop time. */
+/** Urgent alert with the default template (the worker passes the saved template to `renderAlert`). */
 export function composeAlert(alerts: AreaAlert[], now: number, siteUrl: string, sendNo: number, cap: number, sources: string[]): string {
-  const sorted = [...alerts].sort((x, y) => STRENGTH[y.kind] - STRENGTH[x.kind] || x.atMs - y.atMs);
-  const icon = sorted.some((a) => a.kind !== 'rain') ? '⛈️' : '🌧️';
-  return [
-    `${icon} เตือนฝน · ${hhmm(now)} น.`,
-    ...sorted.map((a) => describe(a, now)),
-    '',
-    `ที่มา: ${sources.join(', ')} (เป็นพยากรณ์ อาจคลาดเคลื่อน)`,
-    `ดูรายละเอียด: ${siteUrl}`,
-    `แจ้งเตือนครั้งที่ ${sendNo}/${cap} ของเดือนนี้`,
-    'ใช้ประกอบการตัดสินใจเท่านั้น โปรดตรวจสอบประกาศทางการอีกครั้ง',
-  ].join('\n');
+  return renderAlert(DEFAULT_TEMPLATES.alert, alerts, { now, siteUrl, sources, counter: { sendNo, cap } });
 }
 
+/** 12-hour outlook with the default template. */
 export function composeSummary(outlooks: AreaOutlook[], now: number, siteUrl: string, sendNo: number, cap: number, sources: string[]): string {
-  const sorted = [...outlooks].sort(
-    (x, y) => (y.kind ? STRENGTH[y.kind] : 0) - (x.kind ? STRENGTH[x.kind] : 0) || (x.fromMs ?? Infinity) - (y.fromMs ?? Infinity),
-  );
-  const line = (o: AreaOutlook) => {
-    if (!o.kind || o.fromMs == null || o.toMs == null) return `• ${o.area.name}: โอกาสฝนต่ำ`;
-    const span = o.fromMs === o.toMs ? `ช่วง ${hhmm(o.fromMs)} น.` : `ช่วง ${hhmm(o.fromMs)}–${hhmm(o.toMs + 3600000)} น.`;
-    const what = o.kind === 'storm' ? 'เสี่ยงพายุฝนฟ้าคะนอง' : o.kind === 'heavy' ? 'ฝนหนัก' : 'โอกาสฝนสูง';
-    return `• ${o.area.name}: ${what} ${span}${o.maxProb != null ? ` (สูงสุด ${o.maxProb}%)` : ''}`;
-  };
-  const icon = sorted.some((o) => o.kind && o.kind !== 'rain') ? '⛈️' : '🌦️';
-  return [
-    `${icon} พยากรณ์ฝน 12 ชม. ข้างหน้า · ${hhmm(now)} น.`,
-    ...sorted.map(line),
-    '',
-    `ที่มา: ${sources.join(', ')} (เป็นพยากรณ์ อาจคลาดเคลื่อน)`,
-    `ดูรายละเอียด: ${siteUrl}`,
-    `แจ้งเตือนครั้งที่ ${sendNo}/${cap} ของเดือนนี้`,
-    'ใช้ประกอบการตัดสินใจเท่านั้น โปรดตรวจสอบประกาศทางการอีกครั้ง',
-  ].join('\n');
+  return renderSummary(DEFAULT_TEMPLATES.summary, outlooks, { now, siteUrl, sources, counter: { sendNo, cap } });
 }
 
 export function composeQuotaNotice(cap: number, siteUrl: string): string {
