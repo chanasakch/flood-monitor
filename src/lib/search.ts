@@ -154,6 +154,8 @@ function getLongdoKey(): Promise<string | null> {
 async function searchLongdo(q: string, key: string): Promise<SearchResult[]> {
   // A plain GET without custom headers: no CORS preflight.
   const res = await fetch(`${LONGDO_SEARCH_URL}?keyword=${encodeURIComponent(q)}&limit=8&locale=${getLang()}&key=${encodeURIComponent(key)}`);
+  // Tell our server one Longdo request was made, so the admin page can estimate quota use.
+  void fetch('/api/usage/longdo', { method: 'POST', headers: { 'x-fm-usage': '1' }, keepalive: true }).catch(() => {});
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return parseLongdo(JSON.parse(await res.text()));
 }

@@ -43,3 +43,5 @@ export const lineSample = () =>
   call<{ now: number; siteUrl: string; alerts: AreaAlert[]; outlooks: AreaOutlook[]; sources: string[] }>('/api/admin/line/sample');
 export const sendTest = (text: string, userId: string) =>
   call<{ ok?: boolean; error?: string; message?: string }>('/api/admin/line/test', { method: 'POST', body: JSON.stringify({ text, userId }) });
+
+export const adminUsage = () => call<{ longdo?: { configured: boolean; month: string; count: number; limit: number } }>('/api/admin/usage');

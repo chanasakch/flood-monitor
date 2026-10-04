@@ -221,6 +221,29 @@ function config(env: Env): Response {
   return json({ longdo_key: env.LONGDO_API_KEY?.trim() || null }, { maxAge: 3600 });
 }
 
+// ---------- /api/usage/longdo ----------
+
+/** Free monthly allowance of Longdo Map web-service requests. */
+export const LONGDO_MONTHLY_LIMIT = 100_000;
+
+export const usageMonth = (nowMs: number = Date.now()) => new Date(nowMs + 7 * 3600000).toISOString().slice(0, 7);
+
+/**
+ * The browser reports each search it sent to Longdo, because Longdo has no usage API and the
+ * requests do not pass through this Worker. The total is an estimate for the admin page: it only
+ * covers searches made from this site.
+ */
+async function countLongdo(request: Request, env: Env): Promise<Response> {
+  if (request.headers.get('x-fm-usage') !== '1') return error(400, 'bad_request');
+  await env.DB.prepare(
+    `INSERT INTO usage (month, service, count) VALUES (?1, 'longdo', 1)
+     ON CONFLICT (month, service) DO UPDATE SET count = count + 1`,
+  )
+    .bind(usageMonth())
+    .run();
+  return json({ ok: true });
+}
+
 // ---------- /api/sources ----------
 
 async function sources(env: Env): Promise<Response> {
@@ -250,6 +273,7 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
   const path = url.pathname.replace(/\/+$/, '');
   try {
     if (path === '/api/line/webhook' && request.method === 'POST') return await lineWebhook(request, env, ctx);
+    if (path === '/api/usage/longdo' && request.method === 'POST') return await countLongdo(request, env);
     if (path.startsWith('/api/admin/')) return await handleAdmin(request, env, path);
     if (request.method !== 'GET' && request.method !== 'HEAD') return error(405, 'method_not_allowed');
     if (path === '/api/health') return json({ ok: true });

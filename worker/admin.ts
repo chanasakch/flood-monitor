@@ -259,6 +259,11 @@ export async function handleAdmin(request: Request, env: Env, path: string): Pro
   const admin = await isAdmin(request, env);
   if (path === '/api/admin/me') return json({ admin, configured: !!env.ADMIN_PASSWORD && !!env.SESSION_SECRET });
   if (!admin) return json({ error: 'unauthorized' }, 401);
+  if (path === '/api/admin/usage' && request.method === 'GET') {
+    const month = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 7);
+    const row = await env.DB.prepare("SELECT count FROM usage WHERE month = ? AND service = 'longdo'").bind(month).first<{ count: number }>();
+    return json({ longdo: { configured: !!env.LONGDO_API_KEY, month, count: row?.count ?? 0, limit: 100_000 } });
+  }
   if (path === '/api/admin/line' && request.method === 'GET') return json(await lineState(env));
   if (path === '/api/admin/line/compose' && request.method === 'GET') return json({ text: await forecastText(env) });
   if (path === '/api/admin/line/templates' && request.method === 'GET') return json({ templates: await loadTemplates(env), defaults: DEFAULT_TEMPLATES });

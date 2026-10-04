@@ -411,7 +411,12 @@
     "recipientsN": "{n} messages",
     "okShort": "Sent",
     "link": "For the admin: send LINE messages",
-    "kind_summary": "08:00/18:00 summary"
+    "kind_summary": "08:00/18:00 summary",
+    "longdoTitle": "Place search quota (Longdo Map)",
+    "longdoUsed": "About {n} of {limit} requests used",
+    "longdoLeft": "about {n} left",
+    "longdoNote": "Counts only searches made from this site in {month} (since the counter was added). The real total is on Longdo's key page and may differ slightly.",
+    "longdoLink": "See the real total at Longdo Map"
   },
   "tpl": {
     "tabSend": "Send",

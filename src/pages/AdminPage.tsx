@@ -1,9 +1,10 @@
-import { CloudSun, LogIn, LogOut, RefreshCw, Send } from 'lucide-preact';
+import { CloudSun, ExternalLink, LogIn, LogOut, RefreshCw, Search, Send } from 'lucide-preact';
 import { useEffect, useState } from 'preact/hooks';
 import type { AdminLineState } from '../../shared/types';
+import { ExtLink } from '../components/Link';
 import { CardSkeleton, ErrorState } from '../components/States';
 import { Banner, Chip } from '../components/Status';
-import { adminLogin, adminLogout, adminMe, composeFromForecast, lineState, sendLine } from '../lib/admin';
+import { adminLogin, adminLogout, adminMe, adminUsage, composeFromForecast, lineState, sendLine } from '../lib/admin';
 import { formatAgo, formatDateTime, formatNumber } from '../lib/format';
 import { useNow } from '../lib/hooks';
 import { TemplateEditor } from './TemplateEditor';
@@ -70,6 +71,7 @@ function SendPanel({ onLogout }: { onLogout: () => void }) {
   const [busy, setBusy] = useState(false);
   const [composing, setComposing] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [usage, setUsage] = useState<{ configured: boolean; month: string; count: number; limit: number } | null>(null);
 
   const load = async () => {
     setLoadError(false);
@@ -77,6 +79,9 @@ function SendPanel({ onLogout }: { onLogout: () => void }) {
       const r = await lineState();
       if (r.status === 401) return onLogout();
       setState(r.body);
+      adminUsage()
+        .then((u) => setUsage(u.body.longdo ?? null))
+        .catch(() => setUsage(null));
     } catch {
       setLoadError(true);
     }
@@ -251,6 +256,32 @@ function SendPanel({ onLogout }: { onLogout: () => void }) {
           {busy ? t('admin.sending') : t('admin.send')}
         </button>
       </section>
+
+      {usage && (
+        <section class="card" aria-labelledby="longdo-title">
+          <div class="card-head">
+            <h2 id="longdo-title" class="card-title">
+              <Search size={20} aria-hidden="true" />
+              {t('admin.longdoTitle')}
+            </h2>
+            {!usage.configured && <Chip level="unknown" label={t('alerts.notConfigured')} />}
+          </div>
+          <div class="tpl-meter" role="meter" aria-valuemin={0} aria-valuemax={usage.limit} aria-valuenow={usage.count} aria-label={t('admin.longdoTitle')}>
+            <span style={{ width: `${Math.min(100, (usage.count / usage.limit) * 100)}%` }} class={usage.count > usage.limit * 0.9 ? 'over' : usage.count > usage.limit * 0.7 ? 'near' : ''} />
+          </div>
+          <p class="num">
+            <strong>{t('admin.longdoUsed', { n: formatNumber(usage.count, 0), limit: formatNumber(usage.limit, 0) })}</strong>
+            <span class="muted"> · {t('admin.longdoLeft', { n: formatNumber(Math.max(0, usage.limit - usage.count), 0) })}</span>
+          </p>
+          <p class="muted small">{t('admin.longdoNote', { month: usage.month })}</p>
+          <p class="source-line">
+            <ExtLink href="https://map.longdo.com/api">
+              {t('admin.longdoLink')} <ExternalLink size={13} aria-hidden="true" />
+              <span class="sr-only">{t('common.newTab')}</span>
+            </ExtLink>
+          </p>
+        </section>
+      )}
 
       <section class="card" aria-labelledby="hist-title">
         <h2 id="hist-title">{t('admin.history')}</h2>
